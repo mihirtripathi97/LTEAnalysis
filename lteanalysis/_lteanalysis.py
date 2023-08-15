@@ -60,7 +60,7 @@ class LTEAnalysis():
             return
         else:
             data = pd.read_csv(infile[0], comment='!', 
-                delimiter='\n', header=None)
+                delimiter='\r\n', header=None, engine='python')
 
         # get
         # line name, weight, nlevels
