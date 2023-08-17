@@ -252,6 +252,7 @@ class LTEAnalysis():
                     lineprof=lineprof, mode=mode, Xconv=Xconv[1], Tbg=Tbg, return_tau=False, Tb=Tb))
 
             ax.plot(tb1, tb2, c=cm.coolwarm(float(i+1)/len(Texes)), lw=lw)
+            ax.text(x = tb1[28],y=tb2[28], c =cm.coolwarm(float(i+1)/len(Texes)), s = str(Tex_i)+"K",fontsize = 10)
 
 
         # iso-density curves
