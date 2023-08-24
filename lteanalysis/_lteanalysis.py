@@ -240,10 +240,13 @@ class LTEAnalysis():
         elif (fig is not None) and (ax is None):
             ax  = fig.add_subplot(111)
 
+
+        st_idx = 127
         # iso-temperature curves
         for i, Tex_i in enumerate(Texes):
             tb1 = []
             tb2 = []
+            
             for j, Ncol_i in enumerate(np.logspace(np.log10(Ncols[0]), np.log10(Ncols[-1]),128)):
                 #print ('N, T: %.2e %.f'%(Ncol_i, Tex_i))
                 tb1.append(self.get_intensity(lines[0], J1, Tex_i, Ncol_i, delv, 
@@ -251,8 +254,10 @@ class LTEAnalysis():
                 tb2.append(self.get_intensity(lines[1], J2, Tex_i, Ncol_i, delv, 
                     lineprof=lineprof, mode=mode, Xconv=Xconv[1], Tbg=Tbg, return_tau=False, Tb=Tb))
 
-            ax.plot(tb1, tb2, c=cm.coolwarm(float(i+1)/len(Texes)), lw=lw)
-            ax.text(x = tb1[28],y=tb2[28], c =cm.coolwarm(float(i+1)/len(Texes)), s = str(Tex_i)+"K",fontsize = 10)
+            ax.plot(tb1, tb2, c=cm.Dark2(float(i+1)/len(Texes)), lw=lw)
+            ax.text(x = tb1[st_idx],y=tb2[st_idx], c =cm.Dark2(float(i+1)/len(Texes)), s = str(Tex_i)+"K",fontsize = 15)
+            st_idx = int(st_idx/(i+1))
+
 
 
         # iso-density curves
