@@ -261,6 +261,7 @@ class LTEAnalysis():
 
 
         # iso-density curves
+        st_idx = 127
         for i, Ncol_i in enumerate(Ncols):
             tb1 = []
             tb2 = []
@@ -272,6 +273,8 @@ class LTEAnalysis():
                     lineprof=lineprof, mode=mode, Xconv=Xconv[1], Tbg=Tbg, return_tau=False, Tb=Tb))
 
             ax.plot(tb1, tb2, c='k', lw=lw)#)cm.BrBG(float(i+0.5)/len(Ncols)))
+#            ax.text(x = tb1[st_idx],y=tb2[st_idx], c ='k', s = f"{Ncol_i:.0e}cm\u00b2",fontsize = 15)
+            st_idx = int(st_idx/(i+1))
 
 
         # aspect ratio
