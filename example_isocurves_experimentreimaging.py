@@ -12,8 +12,8 @@ line  = 'c18o'
 Xconv = 1e-7
 delv  = 0.2 # km/s
 ilines = [3,2] # Ju
-Ncols = np.array([5.e15, 1e16, 5e16, 1.e17, 1.e19,]) # cm^-2   # Note the distinction in column density, we have gotten gown a whole order of magnitude
-Texes = np.array([5.,10., 14., 15, 16.5, 18,  22., 30., 40.]) # K
+Ncols = np.array([5.e15, 5e16, 5.e17, 5.e18]) # cm^-2   # Note the distinction in column density, we have gotten gown a whole order of magnitude
+Texes = np.array([5., 10., 14., 15, 16.5, 18,  22., 30., 40.]) # K
 
 
 
