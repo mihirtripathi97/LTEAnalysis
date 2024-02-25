@@ -34,9 +34,9 @@ mp     = constants.m_p.cgs.value      # Proton mass (g)
 
 # path to here
 path_to_here = os.path.dirname(__file__)
-path_to_library = path_to_here.strip('lteanalysis')
-#print (path_to_here)
-#print (path_to_library)
+path_to_library = path_to_here[:-11] # removing last 11 charecters corresponding to `lteanalysis`
+print (path_to_here)
+print (path_to_library)
 
 
 class LTEAnalysis():
