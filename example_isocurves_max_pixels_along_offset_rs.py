@@ -6,7 +6,6 @@ plt.rcParams['axes.labelsize'] = 18
 from lteanalysis import LTEAnalysis
 import pandas as pd
 
-# Maximum brightness pixels
 
 # ----- input -----
 # for LTE calculation
@@ -14,7 +13,7 @@ line  = 'c18o'
 Xconv = 1e-7
 delv  = 0.2 # km/s
 ilines = [3,2] # Ju
-Ncols = np.array([5.e15, 1e16, 5e16, 1.e17, 1e19]) # cm^-2   # Note the distinction in column density, we have gotten gown a whole order of magnitude
+Ncols = np.array([5.e15, 9e15, 1.8e16, 3.e16, 1e19]) # cm^-2   # Note the distinction in column density, we have gotten gown a whole order of magnitude
 Texes = np.array([5, 16,  19,  22., 30., 40.]) # K
 
 
@@ -42,18 +41,18 @@ blue_shifted_pairs_in_gap = np.array([
                                     ])
 
 red_shifted_pairs_outside_gap_inner_edge = np.array([ 
-                                            [8.91, 7.68, 2.858, 0.9],
-                                            [9.17, 9.32,  3.071, 0.775]])
+                                            [8.91, 8.3, 2.858, 0.9],
+                                            [9.14, 9.0,  3.071, 0.775]])
 
 red_shifted_pairs_outside_gap_outer_edge = np.array([
-                                                [9.87, 10.43,  2.023, 1.775],
-                                                [11.24, 10.19,1.82,2.23],
-                                                [ 10.30, 9.49, 1.6, 2.849],
+                                                [9.56, 9.79,  2.023, 1.775],
+                                                [11.14, 10.19,1.82,2.23],
+                                                [ 6.15, 8.48, 1.6, 2.849],
                                                 ])
 
 red_shifted_pairs_in_gap = np.array([
-                                     [8.55, 6.08, 2.44604077, 1.212],
-                                     [8.35, 6.68, 2.65439451, 1.01]
+                                     [8.55, 6.54, 2.44604077, 1.212],
+                                     [8.79, 7.22, 2.65439451, 1.01]
                                      ])
 
 
@@ -106,6 +105,14 @@ if plot_Tb_points:
 
 
 
+
+
+#    ax.errorbar(inner_region_blue[:,0], inner_region_blue[:,1], xerr=1.01, yerr=0.43,
+#       color='k', marker='x', ls='none')
+#   for row_idx in range(inner_region_blue.shape[0]):
+#       point_coord = inner_region_blue[row_idx,:]
+#       ax.annotate(text = f"{point_coord[3]}", xy = (point_coord[0],point_coord[1]), xytext = (15,-15), textcoords='offset points',
+#                           ha='center', va='bottom')
     ax.errorbar(red_shifted_pairs_outside_gap_outer_edge[:,0], red_shifted_pairs_outside_gap_outer_edge[:,1], xerr=1.01, yerr=0.43,
         color='red',  marker='s', ls='none', label = r'r > r$_{dep}$')
     for row_idx in range(red_shifted_pairs_outside_gap_outer_edge.shape[0]):
@@ -128,34 +135,31 @@ if plot_Tb_points:
                             ha='center', va='bottom')
 
 
-#    ax.errorbar(inner_region_blue[:,0], inner_region_blue[:,1], xerr=1.01, yerr=0.43,
-#       color='k', marker='x', ls='none')
-#   for row_idx in range(inner_region_blue.shape[0]):
-#       point_coord = inner_region_blue[row_idx,:]
-#       ax.annotate(text = f"{point_coord[3]}", xy = (point_coord[0],point_coord[1]), xytext = (15,-15), textcoords='offset points',
-#                           ha='center', va='bottom')
 '''
     ax.errorbar(blue_shifted_pairs_outside_gap_outer_edge[:,0], blue_shifted_pairs_outside_gap_outer_edge[:,1], xerr=1.01, yerr=0.43,
-        color='blue', marker='s', ls='none', label = 'points outside depletion region')
+        color='blue', marker='s', ls='none', label = r'r > r$_{dep}$')
     for row_idx in range(blue_shifted_pairs_outside_gap_outer_edge.shape[0]):
         point_coord = blue_shifted_pairs_outside_gap_outer_edge[row_idx,:]
         ax.annotate(text = f"{int(point_coord[3]*140)}AU", xy = (point_coord[0],point_coord[1]), xytext = (25,-25), textcoords='offset points',
                             ha='center', va='bottom')
 
     ax.errorbar(blue_shifted_pairs_outside_gap_inner_edge[:,0], blue_shifted_pairs_outside_gap_inner_edge[:,1], xerr=1.01, yerr=0.43,
-        color='blue', marker='o', ls='none')
+        color='blue', marker='o', ls='none', label = r'r < r$_{dep}$')
     for row_idx in range(blue_shifted_pairs_outside_gap_inner_edge.shape[0]):
         point_coord = blue_shifted_pairs_outside_gap_inner_edge[row_idx,:]
         ax.annotate(text = f"{int(point_coord[3]*140)}AU", xy = (point_coord[0],point_coord[1]), xytext = (35,6), textcoords='offset points',
                             ha='center', va='bottom')
         
     ax.errorbar(blue_shifted_pairs_in_gap[:,0], blue_shifted_pairs_in_gap[:,1], xerr=1.01, yerr=0.43,
-        color='blue', marker='x', ls='none')
+        color='blue', marker='x', ls='none', label = r'r $\approx$ r$_{dep}$')
     for row_idx in range(blue_shifted_pairs_in_gap.shape[0]):
         point_coord = blue_shifted_pairs_in_gap[row_idx,:]
         ax.annotate(text = f"{int(point_coord[3]*140)}AU", xy = (point_coord[0],point_coord[1]), xytext = (28,6), textcoords='offset points',
                             ha='center', va='bottom')
+
 '''
+
+
 
 plt.legend()
 plt.show()

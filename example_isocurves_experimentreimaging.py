@@ -20,7 +20,7 @@ Texes = np.array([5., 10., 14., 15, 16.5, 18,  22., 30., 40.]) # K
 # Following arrays are in this form [[Tb_band7, Tb_band_6, Rotational_velocity,offset]]
 
 blue_shifted_pairs_outside_gap_outer_edge = np.array([ 
-                                            # [10.42,   7.35, -1.51, -3.138],      
+                                             [10.42,   7.35, -1.51, -3.138],      
                                             # [10.62,   6.52, -1.72103403, -2.469],  
                                             ])
 
