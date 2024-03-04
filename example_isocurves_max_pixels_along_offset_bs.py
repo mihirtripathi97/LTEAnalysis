@@ -40,81 +40,8 @@ blue_shifted_pairs_in_gap = np.array([
                                       [9.74,  8.8, -1.92938777, -1.959], 
                                     ])
 
-# This following section needs updated values (4/3/24)
-
-red_shifted_pairs_outside_gap_inner_edge = np.array([ 
-                                            [8.91, 7.68, 2.858, 0.9],
-                                            [9.17, 9.32,  3.071, 0.775]])
-
-red_shifted_pairs_outside_gap_outer_edge = np.array([
-                                                [9.87, 10.43,  2.023, 1.775],
-                                                [11.24, 10.19,1.82,2.23],
-                                                [ 10.30, 9.49, 1.6, 2.849],
-                                                ])
-
-red_shifted_pairs_in_gap = np.array([
-                                     [8.55, 6.08, 2.44604077, 1.212],
-                                     [8.35, 6.68, 2.65439451, 1.01]
-                                     ])
 
 
-inner_region_red = np.array([
-                            [8.70,8.23,3.27,0.685, 16.5],
-                            [10.07,7.57,3488,0.606, 20.],
-                            [10.28,7.13,3.699,0.539,21.],
-                            [8.25,6.13,3.98,0.478,18.0 ],
-                            [7.24,6.94,4.1,0.435,15.0],
-                            [6.01,4.43,4.3,0.393,16.5],
-                            [4.01,4.93,4.73,0.326,10.]      
-                        ])
-outer_region_red = np.array([
-                            [12.42,10.18,1.81, 2.208,21.5],
-                            [8.34,8.50,1.6,2.82, 15.0],
-                            [4.65,6.62,1.4,3.7, 10.0],
-                            [1.42,4.58,1.20,5.11,5.0],                          
-                            ])
-
-outer_region_blue = np.array([
-                            [5.64,2.44, -1.3,-4.30,30.0]
-                            ])
-
-inner_region_blue = np.array([
-                    [10.60,8.58,-2.77,-0.958, 20.],
-                    [9.30,7.84,-2.97,-0.823, 18.],
-                    [9.55,7.38,-3.17,-0.724, 20.],
-                    [9.21,6.43,-3.39,-0.632, 21.0],
-                    [7.65,5.35,-3.6,-0.576, 18.],
-                    ])
-
-#data = [6., 6.,] # Tb3-2, Tb2-1
-#e_data = [1., 0.5] # Error of data
-# ------------------
-
-
-
-# -------- start --------
-model = LTEAnalysis()
-model.read_lamda_moldata(line)
-fig, ax = model.makegrid(line, ilines[0], ilines[1], Texes, Ncols, delv, Xconv=Xconv, lw=1.)
-ax.set_xlim(0., 15)
-ax.set_ylim(0., 15)
-
-
-plot_Tb_points = True
-
-if plot_Tb_points:
-
-
-
-
-
-
-#    ax.errorbar(inner_region_blue[:,0], inner_region_blue[:,1], xerr=1.01, yerr=0.43,
-#       color='k', marker='x', ls='none')
-#   for row_idx in range(inner_region_blue.shape[0]):
-#       point_coord = inner_region_blue[row_idx,:]
-#       ax.annotate(text = f"{point_coord[3]}", xy = (point_coord[0],point_coord[1]), xytext = (15,-15), textcoords='offset points',
-#                           ha='center', va='bottom')
 
     ax.errorbar(blue_shifted_pairs_outside_gap_outer_edge[:,0], blue_shifted_pairs_outside_gap_outer_edge[:,1], xerr=1.01, yerr=0.43,
         color='blue', marker='s', ls='none', label = r'r > r$_{dep}$')

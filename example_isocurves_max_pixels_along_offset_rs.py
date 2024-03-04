@@ -35,54 +35,6 @@ blue_shifted_pairs_outside_gap_inner_edge = np.array([
                                             [9.75, 8.43, -2.970,-0.824]   
                                             ])
 
-blue_shifted_pairs_in_gap = np.array([ 
-                                      [10.08,  7.46, -2.13774151, -1.602],
-                                      [10.04,  7.95, -1.92938777, -1.959], 
-                                    ])
-
-red_shifted_pairs_outside_gap_inner_edge = np.array([ 
-                                            [8.91, 8.3, 2.858, 0.9],
-                                            [9.14, 9.0,  3.071, 0.775]])
-
-red_shifted_pairs_outside_gap_outer_edge = np.array([
-                                                [9.56, 9.79,  2.023, 1.775],
-                                                [11.14, 10.19,1.82,2.23],
-                                                [ 6.15, 8.48, 1.6, 2.849],
-                                                ])
-
-red_shifted_pairs_in_gap = np.array([
-                                     [8.55, 6.54, 2.44604077, 1.212],
-                                     [8.79, 7.22, 2.65439451, 1.01]
-                                     ])
-
-
-inner_region_red = np.array([
-                            [8.70,8.23,3.27,0.685, 16.5],
-                            [10.07,7.57,3488,0.606, 20.],
-                            [10.28,7.13,3.699,0.539,21.],
-                            [8.25,6.13,3.98,0.478,18.0 ],
-                            [7.24,6.94,4.1,0.435,15.0],
-                            [6.01,4.43,4.3,0.393,16.5],
-                            [4.01,4.93,4.73,0.326,10.]      
-                        ])
-outer_region_red = np.array([
-                            [12.42,10.18,1.81, 2.208,21.5],
-                            [8.34,8.50,1.6,2.82, 15.0],
-                            [4.65,6.62,1.4,3.7, 10.0],
-                            [1.42,4.58,1.20,5.11,5.0],                          
-                            ])
-
-outer_region_blue = np.array([
-                            [5.64,2.44, -1.3,-4.30,30.0]
-                            ])
-
-inner_region_blue = np.array([
-                    [10.60,8.58,-2.77,-0.958, 20.],
-                    [9.30,7.84,-2.97,-0.823, 18.],
-                    [9.55,7.38,-3.17,-0.724, 20.],
-                    [9.21,6.43,-3.39,-0.632, 21.0],
-                    [7.65,5.35,-3.6,-0.576, 18.],
-                    ])
 
 #data = [6., 6.,] # Tb3-2, Tb2-1
 #e_data = [1., 0.5] # Error of data
@@ -133,31 +85,6 @@ if plot_Tb_points:
         point_coord = red_shifted_pairs_in_gap[row_idx,:]
         ax.annotate(text = f"{int(point_coord[3]*140)} AU", xy = (point_coord[0],point_coord[1]), xytext = (15,-15), textcoords='offset points',
                             ha='center', va='bottom')
-
-
-'''
-    ax.errorbar(blue_shifted_pairs_outside_gap_outer_edge[:,0], blue_shifted_pairs_outside_gap_outer_edge[:,1], xerr=1.01, yerr=0.43,
-        color='blue', marker='s', ls='none', label = r'r > r$_{dep}$')
-    for row_idx in range(blue_shifted_pairs_outside_gap_outer_edge.shape[0]):
-        point_coord = blue_shifted_pairs_outside_gap_outer_edge[row_idx,:]
-        ax.annotate(text = f"{int(point_coord[3]*140)}AU", xy = (point_coord[0],point_coord[1]), xytext = (25,-25), textcoords='offset points',
-                            ha='center', va='bottom')
-
-    ax.errorbar(blue_shifted_pairs_outside_gap_inner_edge[:,0], blue_shifted_pairs_outside_gap_inner_edge[:,1], xerr=1.01, yerr=0.43,
-        color='blue', marker='o', ls='none', label = r'r < r$_{dep}$')
-    for row_idx in range(blue_shifted_pairs_outside_gap_inner_edge.shape[0]):
-        point_coord = blue_shifted_pairs_outside_gap_inner_edge[row_idx,:]
-        ax.annotate(text = f"{int(point_coord[3]*140)}AU", xy = (point_coord[0],point_coord[1]), xytext = (35,6), textcoords='offset points',
-                            ha='center', va='bottom')
-        
-    ax.errorbar(blue_shifted_pairs_in_gap[:,0], blue_shifted_pairs_in_gap[:,1], xerr=1.01, yerr=0.43,
-        color='blue', marker='x', ls='none', label = r'r $\approx$ r$_{dep}$')
-    for row_idx in range(blue_shifted_pairs_in_gap.shape[0]):
-        point_coord = blue_shifted_pairs_in_gap[row_idx,:]
-        ax.annotate(text = f"{int(point_coord[3]*140)}AU", xy = (point_coord[0],point_coord[1]), xytext = (28,6), textcoords='offset points',
-                            ha='center', va='bottom')
-
-'''
 
 
 
