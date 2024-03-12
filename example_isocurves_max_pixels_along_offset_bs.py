@@ -41,7 +41,16 @@ blue_shifted_pairs_in_gap = np.array([
                                     ])
 
 
+model = LTEAnalysis()
+model.read_lamda_moldata(line)
+fig, ax = model.makegrid(line, ilines[0], ilines[1], Texes, Ncols, delv, Xconv=Xconv, lw=1.)
+ax.set_xlim(0., 15)
+ax.set_ylim(0., 15)
 
+
+plot_Tb_points = True
+
+if plot_Tb_points:
 
     ax.errorbar(blue_shifted_pairs_outside_gap_outer_edge[:,0], blue_shifted_pairs_outside_gap_outer_edge[:,1], xerr=1.01, yerr=0.43,
         color='blue', marker='s', ls='none', label = r'r > r$_{dep}$')
