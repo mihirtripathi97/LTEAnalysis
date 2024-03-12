@@ -154,12 +154,14 @@ class LTEAnalysis():
         if Xconv: Ncol *= Xconv
 
         # tau_v
-        tau_v = (clight*clight)/(8.*np.pi*freq_ul*freq_ul)*(gu/Qrot)\
+        tau_v = (clight*clight*clight)/(8.*np.pi*freq_ul*freq_ul*freq_ul)*(gu/Qrot)\
         *np.exp(-EJu/Tex)*Ncol*Aul*(np.exp(hp*freq_ul/(kb*Tex)) - 1.)/delv
+        print('tau = %.2e'%tau_v)
 
         if return_tau:
             return tau_v
         Iv = Bv(Tbg,freq_ul)*np.exp(-tau_v) + Bv(Tex, freq_ul)*(1. - np.exp(-tau_v))
+        Iv -= Bv(Tbg,freq_ul)
 
         if Tb:
             # equivalent brightness temperature
@@ -180,6 +182,198 @@ class LTEAnalysis():
             mode=mode, Xconv=Xconv, Tbg=Tbg, return_tau=False, Tb=True)
 
         return tb_u/tb_l
+
+    def get_ltemass(self, line, Fv, Ju, Tex, Xconv,
+        dist=140., mu=2.8, S_TA=None, bmaj=None, bmin=None):
+        # line
+        if line in self.moldata.keys():
+            pass
+        else:
+            self.read_lamda_moldata(line)
+
+        # line Ju --> Jl
+        freq_ul = self.moldata[line]['freq'][Ju-1]*1e9 # Hz
+        Aul     = self.moldata[line]['Acoeff'][Ju-1]
+        gu      = self.moldata[line]['gJ'][Ju]
+        gl      = self.moldata[line]['gJ'][Ju-1]
+        EJu     = self.moldata[line]['EJ'][Ju]
+
+        # partition function
+        Qrot = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'], 
+            self.moldata[line]['J'], Tex)
+
+        # !!! start !!!
+        dist_pc = dist * pc # pc --> cm
+        C1 = Qrot * (4. * np.pi * mu * mp)/(hp * clight * gu * Aul)
+
+        # observed flux
+        if S_TA:
+            if bmaj == None:
+                print ('ERROR\tLTEmass: bmaj and bmin must be given\
+                 for conversion from K arcsec2 km/s --> Jy km/s.')
+                return
+            elif bmin == None:
+                print ('ERROR\tLTEmass: bmaj and bmin must be given\
+                 for conversion from K arcsec2 km/s --> Jy km/s.')
+                return
+
+            # convert units
+            bmaj = bmaj*np.pi/(180.*60.*60.) # arcsec --> radian
+            bmin = bmin*np.pi/(180.*60.*60.) # arcsec --> radian
+            Fv       = Fv*S_TA                         # K arcsec2 km/s --> Jy/beam arcesc2 km/s
+            beamsize = np.pi/(4.*np.log(2.))*bmaj*bmin # beam --> arcsec2
+            Fv       = Fv/beamsize                     # --> Jy km/s
+
+
+        # From Jy km/s to cgs
+        Fv = Fv*1.0e-26         # Jy km/s --> MKS (1 Jy = 10^-26 Wm-2Hz-1)
+        Fv = Fv*1.e7*1.e5*1.e-4 # mks --> cgs (erg cm^-2 cm/s)
+
+        # Mgas (assuming optically thin)
+        Mgas = C1 * np.exp(EJu/Tex) * dist_pc * dist_pc * Fv/Xconv # g
+        Mgas = Mgas / ms # g --> Msun
+        print ('Mgas: %.4f Msun'%Mgas)
+
+        return Mgas
+
+
+    def get_column(self, line, Iint, bmaj, bmin, 
+        Ju, Tex, Xconv, dist=140., 
+        tau=False, delv=None, sigma=False, Tbg=2.73, number=True,
+        err_Ivint=0., err_Tex=0., err_delv=0.):
+        '''
+        Calculate gas column density from line
+
+        Args:
+          Iving: integrated intensity [Jy/beam km/s]
+          Tk: kinetic temperature [K]
+          bmaj, bmin: beam size along beam major and minor axis [arcsec]
+          Ju(int): upper excitation state
+          Z: partision function
+          Xconv: conversion factor
+          dist: distance to the object [pc]
+          Tbg: background temperature [K]
+
+          (parameters of molecules)
+          Acoeff: Einstein A coefficient [s^-1]
+          freq: frequency [GHz]
+          delE: transitional energy [K]
+          EJ: energy at J [cm^-1]
+          gJ: statistical weight
+          J: energy level
+          mu: molecular weight
+          Brot: rotational constant [s^-1]
+
+        Return:
+          Sigma_H2O [g cm^-2]
+        '''
+
+        # line
+        if line in self.moldata.keys():
+            pass
+        else:
+            self.read_lamda_moldata(line)
+
+        # line Ju --> Jl
+        freq_ul = self.moldata[line]['freq'][Ju-1]*1e9 # Hz
+        Aul     = self.moldata[line]['Acoeff'][Ju-1]
+        gu      = self.moldata[line]['gJ'][Ju]
+        gl      = self.moldata[line]['gJ'][Ju-1]
+        EJu     = self.moldata[line]['EJ'][Ju]
+        mu      = self.moldata[line]['weight']
+
+        # partition function
+        Qrot = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'], 
+            self.moldata[line]['J'], Tex)
+
+        # !!! start !!!
+        dist_pc = dist * pc # pc --> cm
+        C1 = Qrot * (4. * np.pi * mu * mp)/(hp * clight * gu * Aul)
+
+        # convert units
+        bmaj = bmaj*np.pi/(180.*60.*60.) # arcsec --> radian
+        bmin = bmin*np.pi/(180.*60.*60.) # arcsec --> radian
+
+
+        if tau:
+            # derive column density from optical depth tau
+            if delv:
+                pass
+            else:
+                print ('ERROR: delv is necessary if tau=True')
+                return
+
+            delv = delv * 1.e5 # km/s --> cm/s
+
+            if sigma:
+                term_delv = np.sqrt(2.*np.pi)*delv
+            else:
+                term_delv = np.sqrt(np.pi)*delv/(2.*np.sqrt(np.log(2.)))
+
+            tau_tot   = Ivint
+            c1        = 8. * np.pi * freq_ul**3. * Qrot
+            c2        = clight * clight * clight * gu * Aul
+            exp       = np.exp(EJu/Tex)
+            exp2      = np.exp(hp * freq_ul / (kb * Tex)) - 1.
+            N_mol     = tau_tot * term_delv * c1 / c2 * exp / exp2
+            Sigma_mol = N_mol * mu * mp
+
+            # Calculate the error propagation.
+            dN_dtau  = N_mol/tau_tot
+            dN_ddelv = N_mol/delv
+            dN_dTex  = c1 / c2 * tau_tot * term_delv * Tex**(-2.) * exp * exp2**(-2.)\
+             *((-EJu + hp * freq_ul / kb) * np.exp(hp * freq_ul / (kb * Tex)) + EJu)
+
+            err_Nmol   = np.sqrt((dN_dtau*err_Ivint)**2. 
+                + (dN_ddelv*err_delv)**2. 
+                + (dN_dTex*err_Tex)**2. )
+            err_Sigmol = err_Nmol * mu * mp
+        else:
+            # derive column density from the integrated intensity
+
+            # Jy/beam -> Jy/str
+            # Omg_beam (str) = (pi/4ln(2))*beam (rad^2)
+            # I [Jy/beam] / Omg_beam = I [Jy/str]
+            # beam area = Omega_beam*d^2
+            C2     = np.pi / (4.*np.log(2.)) # beam(rad) -> beam (sr)
+            bTOstr = bmaj * bmin * C2          # beam --> str
+
+            Istr = Iint/bTOstr          # Jy/beam km/s --> Jy/str km/s
+            Istr = Istr*1.0e-26          # Jy --> MKS (Jy = 10^-26 Wm-2Hz-1)
+            Istr = Istr*1.e7*1.e-4*1.e5  # MKS --> cgs (erg s^-1 cm^-2 Hz^-1 str^-1 cm/s)
+            err_Istr = err_Ivint/bTOstr
+            err_Istr = err_Istr*1.0e-26*1.e7*1.e-4*1.e5
+
+            # coefficients
+            c1  = 8. * np.pi * freq_ul**3. * Qrot
+            c2  = clight * clight * clight * gu * Aul
+            exp = np.exp(EJu/Tex)
+            jterm = Bv(Tex, freq_ul) - Bv(Tbg, freq_ul)
+            exp2  = np.exp(hp * freq_ul / (kb * Tex)) - 1.
+
+            N_mol     = Istr*c1/c2*exp/exp2/jterm # cm^-2
+            Sigma_mol = N_mol * mu * mp           # g cm^-2
+
+            # Calculate the error propagation.
+            dN_dIvint  = N_mol/Istr
+            err_Nmol   = np.sqrt((dN_dIvint*err_Istr)**2. )
+            err_Sigmol = err_Nmol * mu * mp
+
+        # column density of H2O gas
+        N_H2      = N_mol/Xconv
+        Sigma_H2  = Sigma_mol/Xconv
+
+        if number:
+            print ('N_%s: %4e cm^-2'%(line, N_mol))
+            print ('Uncertainty: %4e cm^-2'%err_Nmol)
+            #print ('N_H2: %4e cm^-2'%N_H2)
+            return N_mol #, N_H2
+        else:
+            print ('Sigma_%s: %4e g cm^-2'%(line, Sigma_mol))
+            print ('Uncertainty: %4e g cm^-2'%err_Sigmol)
+            #print ('Sigma_H2: %4e g cm^-2'%Sigma_H2)
+            return Sigma_mol #, Sigma_H2
+
 
 
     def makegrid(self, lines, J1, J2, Texes, Ncols, delv, lineprof='rect', 
