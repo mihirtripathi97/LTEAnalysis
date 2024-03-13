@@ -43,7 +43,6 @@ class LTEAnalysis():
 
     def __init__(self):
         self.moldata = {}
-
     # read molecular data
     def read_lamda_moldata(self, line):
         '''
@@ -78,7 +77,7 @@ class LTEAnalysis():
         J   = np.array([ int(J[i]) for i in range(nlevels)])
 
         # number of transition
-        ntrans = data[0][3+nlevels].strip()
+        ntrans = data[0][3+nlevels].strip()  # Find number of radiative transitions listed in the file
         ntrans = int(ntrans)
 
         # Einstein A coefficient
@@ -154,12 +153,12 @@ class LTEAnalysis():
         if Xconv: Ncol *= Xconv
 
         # tau_v
-        tau_v = (clight*clight*clight)/(8.*np.pi*freq_ul*freq_ul*freq_ul)*(gu/Qrot)\
-        *np.exp(-EJu/Tex)*Ncol*Aul*(np.exp(hp*freq_ul/(kb*Tex)) - 1.)/delv
-        print('tau = %.2e'%tau_v)
+        tau_v = (clight*clight*clight)/(8.*np.pi*freq_ul*freq_ul*freq_ul)*(gu/Qrot)*np.exp(-EJu/Tex)*Ncol*Aul*(np.exp(hp*freq_ul/(kb*Tex)) - 1.)/delv
+        # print('tau = %.2e'%tau_v)
 
         if return_tau:
             return tau_v
+        
         Iv = Bv(Tbg,freq_ul)*np.exp(-tau_v) + Bv(Tex, freq_ul)*(1. - np.exp(-tau_v))
         Iv -= Bv(Tbg,freq_ul)
 
@@ -168,7 +167,6 @@ class LTEAnalysis():
             return (clight*clight/(2.*freq_ul*freq_ul*kb))*Iv
         else:
             return Iv
-
 
     def get_tbratio(self, line, Ju_u, Ju_l, Tex, Ncol, delv, lineprof='rect', 
         mode='lte', Xconv=None, Tbg=2.73):
@@ -235,7 +233,6 @@ class LTEAnalysis():
         print ('Mgas: %.4f Msun'%Mgas)
 
         return Mgas
-
 
     def get_column(self, line, Iint, bmaj, bmin, 
         Ju, Tex, Xconv, dist=140., 
@@ -374,8 +371,6 @@ class LTEAnalysis():
             #print ('Sigma_H2: %4e g cm^-2'%Sigma_H2)
             return Sigma_mol #, Sigma_H2
 
-
-
     def makegrid(self, lines, J1, J2, Texes, Ncols, delv, lineprof='rect', 
         mode='lte', Xconv=[], Tbg=2.73, Tb=True, fig=None, ax=None, lw=1., aspect=1.):
         '''
@@ -429,11 +424,12 @@ class LTEAnalysis():
 
         # figure
         if (fig is None) and (ax is None):
-            fig = plt.figure()#figsize=(11.69, 8.27))
+            fig = plt.figure() #figsize=(11.69, 8.27))
             ax  = fig.add_subplot(111)
         elif (fig is not None) and (ax is None):
             ax  = fig.add_subplot(111)
 
+        st_idx = 127
         # iso-temperature curves
         for i, Tex_i in enumerate(Texes):
             tb1 = []
@@ -446,7 +442,8 @@ class LTEAnalysis():
                     lineprof=lineprof, mode=mode, Xconv=Xconv[1], Tbg=Tbg, return_tau=False, Tb=Tb))
 
             ax.plot(tb1, tb2, c=cm.coolwarm(float(i+1)/len(Texes)), lw=lw)
-
+            ax.text(x = tb1[st_idx],y=tb2[st_idx], c =cm.Dark2(float(i+1)/len(Texes)), s = str(Tex_i)+"K",fontsize = 15)
+            #st_idx = int(st_idx/(i+1))
 
         # iso-density curves
         for i, Ncol_i in enumerate(Ncols):
@@ -468,10 +465,6 @@ class LTEAnalysis():
         change_aspect_ratio(ax, aspect)
 
         return fig, ax
-
-
-
-
 
 # partition function
 def Pfunc(EJ, gJ, J, Tex):
@@ -505,7 +498,6 @@ def Bv(T,v):
     fterm = (2.0*hp*v*v*v)/(clight*clight)
     Bv    = fterm/exp
     return Bv
-
 
 
 def change_aspect_ratio(ax, ratio, plottype='linear'):
