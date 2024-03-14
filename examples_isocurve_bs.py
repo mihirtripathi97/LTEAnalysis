@@ -37,29 +37,30 @@ blue_shifted_pairs_in_gap = np.array([
 
 
 
-def cost_function(params, X, Y):
+def cost_function(params, X, Y, model):
     N, T = params
-    predictions = F1(N, T, X), F2(N, T, X)
-    error = np.sum((predictions - Y)**2)
+    X_predicted = model.get_intensity(line = line, Ju =ilines[0], Ncol = N, Tex = T, delv = 0.5),
+    Y_predicted = model.get_intensity(line = line, Ju =ilines[1], Ncol = N, Tex = T, delv = 0.5)
+    error = np.sum((X_predicted - X)**2 + (Y_predicted - Y)**2)
     return error
 
-def gradient(params, X, Y):
-    h = 1e-5
+def gradient(params, X, Y, model):
+    h = 0.1*np.array(params), 
     grad = np.zeros_like(params)
     for i in range(len(params)):
         params_plus_h = params.copy()
-        params_plus_h[i] += h
-        cost_plus_h = cost_function(params_plus_h, X, Y)
+        params_plus_h[i] += h[i]
+        cost_plus_h = cost_function(params_plus_h, X, Y, model)
         params_minus_h = params.copy()
-        params_minus_h[i] -= h
-        cost_minus_h = cost_function(params_minus_h, X, Y)
-        grad[i] = (cost_plus_h - cost_minus_h) / (2 * h)
+        params_minus_h[i] -= h[i]
+        cost_minus_h = cost_function(params_minus_h, X, Y, model)
+        grad[i] = (cost_plus_h - cost_minus_h) / (2 * h[i])
     return grad
 
-def gradient_descent(X, Y, initial_params, learning_rate, tolerance, max_iter):
+def gradient_descent(X, Y, initial_params, learning_rate, tolerance, max_iter, model):
     params = initial_params
     for i in range(max_iter):
-        grad = gradient(params, X, Y)
+        grad = gradient(params, X, Y, model)
         params -= learning_rate * grad
         if np.linalg.norm(grad) < tolerance:
             print(f"Converged after {i+1} iterations")
@@ -68,10 +69,32 @@ def gradient_descent(X, Y, initial_params, learning_rate, tolerance, max_iter):
 
 
 
+lte_model = LTEAnalysis()
+lte_model.read_lamda_moldata(line)
 
-model = LTEAnalysis()
-model.read_lamda_moldata(line)
-fig, ax = model.makegrid(line, ilines[0], ilines[1], Texes, Ncols, delv, Xconv=Xconv, lw=1.)
+# Let's read Tb values of all points from blue shifted points outside gap
+df_bs_os_gap = pd.DataFrame(blue_shifted_pairs_outside_gap_inner_edge, columns = ["Tb_b7", "Tb_b6", "V", "R_as"])
+
+# Call gradient decent to estimate N and T for each pair of Tbs in the dataframe
+N_c = []
+T_e = []
+
+for i in range(len(df_bs_os_gap)):
+
+    print(f"Finding best fit for {i}th pair")
+    parameters = gradient_descent(X = df_bs_os_gap["Tb_b7"][i], Y = df_bs_os_gap["Tb_b6"][i],
+                                    initial_params = [1e17,30], learning_rate=0.01, tolerance=1e-7, 
+                                    max_iter=100000, model = lte_model)
+
+    N_c.append(parameters[0])
+    T_e.append(parameters[-1])
+
+
+Texes.append(T_e)
+Ncols.append(N_c)
+
+
+fig, ax = lte_model.makegrid(line, ilines[0], ilines[1], Texes, Ncols, delv, Xconv=Xconv, lw=1.)
 ax.set_xlim(0., 15)
 ax.set_ylim(0., 15)
 
