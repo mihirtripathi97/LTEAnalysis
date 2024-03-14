@@ -14,8 +14,8 @@ line  = 'c18o'
 Xconv = 1e-7
 delv  = 0.2 # km/s
 ilines = [3,2] # Ju
-Ncols = np.array([5.e15, 5.e16, 5.e17 ]) # cm^-2  
-Texes = np.array([5, 17.5,  20,  22., 30., 40.]) # K
+Ncols = np.array([5.e15, 5.e16, 5.e18]) # cm^-2  
+Texes = np.array([5, 30]) # K
 
 
 
@@ -38,21 +38,22 @@ blue_shifted_pairs_in_gap = np.array([
 
 
 def cost_function(params, X, Y, model):
-    N, T = params
-    X_predicted = model.get_intensity(line = line, Ju =ilines[0], Ncol = N, Tex = T, delv = 0.5),
-    Y_predicted = model.get_intensity(line = line, Ju =ilines[1], Ncol = N, Tex = T, delv = 0.5)
+
+    print("printing params", params)
+    N, T = params[0], params[1]
+    X_predicted = model.get_intensity(line = line, Ju =ilines[0], Ncol = N, Tex = T, delv = 0.5, Xconv=Xconv),
+    Y_predicted = model.get_intensity(line = line, Ju =ilines[1], Ncol = N, Tex = T, delv = 0.5, Xconv=Xconv)
     error = np.sum((X_predicted - X)**2 + (Y_predicted - Y)**2)
     return error
 
-def gradient(params, X, Y, model):
-    h = 0.1*np.array(params), 
-    grad = np.zeros_like(params)
+def gradient(params, X, Y, model, h=[1e15, 1e-5] ):
+    grad = np.zeros_like(params, dtype=float)  # Ensure the gradient array has the same data type as params
     for i in range(len(params)):
         params_plus_h = params.copy()
-        params_plus_h[i] += h[i]
+        params_plus_h[i] = params_plus_h[i] + h[i]
         cost_plus_h = cost_function(params_plus_h, X, Y, model)
         params_minus_h = params.copy()
-        params_minus_h[i] -= h[i]
+        params_minus_h[i] = params_minus_h[i] - h[i]
         cost_minus_h = cost_function(params_minus_h, X, Y, model)
         grad[i] = (cost_plus_h - cost_minus_h) / (2 * h[i])
     return grad
@@ -83,15 +84,15 @@ for i in range(len(df_bs_os_gap)):
 
     print(f"Finding best fit for {i}th pair")
     parameters = gradient_descent(X = df_bs_os_gap["Tb_b7"][i], Y = df_bs_os_gap["Tb_b6"][i],
-                                    initial_params = [1e17,30], learning_rate=0.01, tolerance=1e-7, 
+                                    initial_params = np.array([1e17,30]), learning_rate=0.01, tolerance=1e-7, 
                                     max_iter=100000, model = lte_model)
 
     N_c.append(parameters[0])
     T_e.append(parameters[-1])
 
 
-Texes.append(T_e)
-Ncols.append(N_c)
+Texes = np.append(Texes, T_e)
+Ncols = np.append(Ncols, N_c)
 
 
 fig, ax = lte_model.makegrid(line, ilines[0], ilines[1], Texes, Ncols, delv, Xconv=Xconv, lw=1.)
