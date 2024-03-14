@@ -33,11 +33,8 @@ mp     = constants.m_p.cgs.value      # Proton mass (g)
 
 
 # path to here
-path_to_here = os.path.dirname(__file__)
-path_to_library = path_to_here.strip('lteanalysis')
-#print (path_to_here)
-#print (path_to_library)
-
+curdir = os.path.abspath(os.path.dirname(__file__))
+datadir = os.path.join(curdir, "moldata")
 
 class LTEAnalysis():
 
@@ -52,7 +49,7 @@ class LTEAnalysis():
         # find path
         line = line.lower()
         if '+' in line: line = line.replace('+','p')
-        infile = glob.glob(path_to_library+'moldata/'+line+'.dat')
+        infile = glob.glob(os.path.join(datadir, line +'.dat'))
         if len(infile) == 0:
             print('ERROR\tread_lamda_moldata: Cannot find LAMDA file.')
             print('ERROR\tread_lamda_moldata: Only C18O, CO, and N2H+ are \
