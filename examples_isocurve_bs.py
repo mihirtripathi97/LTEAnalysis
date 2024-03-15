@@ -14,7 +14,7 @@ line  = 'c18o'
 Xconv = 1e-7
 delv  = 0.2 # km/s
 ilines = [3,2] # Ju
-Ncols = np.array([5.e15, 5.e16, 5.e18]) # cm^-2  
+Ncols = np.array([5.e16, 5.e17, 5.e18, 5.e19]) # cm^-2  
 Texes = np.array([5, 30]) # K
 
 
@@ -39,14 +39,14 @@ blue_shifted_pairs_in_gap = np.array([
 
 def cost_function(params, X, Y, model):
 
-    print("printing params", params)
+    # print("printing params", params)
     N, T = params[0], params[1]
-    X_predicted = model.get_intensity(line = line, Ju =ilines[0], Ncol = N, Tex = T, delv = 0.5, Xconv=Xconv),
-    Y_predicted = model.get_intensity(line = line, Ju =ilines[1], Ncol = N, Tex = T, delv = 0.5, Xconv=Xconv)
+    X_predicted = model.get_intensity(line = line, Ju = ilines[0], Ncol = N, Tex = T, delv = 0.5, Xconv = Xconv),
+    Y_predicted = model.get_intensity(line = line, Ju = ilines[1], Ncol = N, Tex = T, delv = 0.5, Xconv = Xconv)
     error = np.sum((X_predicted - X)**2 + (Y_predicted - Y)**2)
     return error
 
-def gradient(params, X, Y, model, h=[1e15, 1e-5] ):
+def gradient(params, X, Y, model, h=[1e16, 1e-5] ):
     grad = np.zeros_like(params, dtype=float)  # Ensure the gradient array has the same data type as params
     for i in range(len(params)):
         params_plus_h = params.copy()
@@ -84,7 +84,7 @@ for i in range(len(df_bs_os_gap)):
 
     print(f"Finding best fit for {i}th pair")
     parameters = gradient_descent(X = df_bs_os_gap["Tb_b7"][i], Y = df_bs_os_gap["Tb_b6"][i],
-                                    initial_params = np.array([1e17,30]), learning_rate=0.01, tolerance=1e-7, 
+                                    initial_params = np.array([1e17,30]), learning_rate=0.01, tolerance=1e-2, 
                                     max_iter=100000, model = lte_model)
 
     N_c.append(parameters[0])
@@ -95,6 +95,10 @@ Texes = np.append(Texes, T_e)
 Ncols = np.append(Ncols, N_c)
 
 
+Tb_7_pred = lte_model.get_intensity(line = line, Ju = ilines[0], Ncol = N_c[0]*1.1, Tex = T_e[0], delv = 0.5, Xconv=Xconv)
+Tb_6_pred = lte_model.get_intensity(line = line, Ju = ilines[1], Ncol = N_c[1]*1.1, Tex = T_e[0], delv = 0.5, Xconv=Xconv)
+
+print(Ncols)
 fig, ax = lte_model.makegrid(line, ilines[0], ilines[1], Texes, Ncols, delv, Xconv=Xconv, lw=1.)
 ax.set_xlim(0., 15)
 ax.set_ylim(0., 15)
@@ -117,7 +121,10 @@ if plot_Tb_points:
         point_coord = blue_shifted_pairs_outside_gap_inner_edge[row_idx,:]
         ax.annotate(text = f"{int(point_coord[3]*140)}AU", xy = (point_coord[0],point_coord[1]), xytext = (35,6), textcoords='offset points',
                             ha='center', va='bottom')
-        
+
+    ax.scatter(Tb_7_pred, Tb_6_pred, color = 'green')
+
+
     ax.errorbar(blue_shifted_pairs_in_gap[:,0], blue_shifted_pairs_in_gap[:,1], xerr=1.01, yerr=0.43,
         color='blue', marker='x', ls='none', label = r'r $\approx$ r$_{dep}$')
     for row_idx in range(blue_shifted_pairs_in_gap.shape[0]):
