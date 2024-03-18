@@ -449,7 +449,7 @@ class LTEAnalysis():
         for i, Ncol_i in enumerate(Ncols):
             tb1 = []
             tb2 = []
-            for j, Tex_i in enumerate(np.linspace(np.max(Texes), np.max(Texes),128)):
+            for j, Tex_i in enumerate(np.linspace(np.min(Texes), np.max(Texes),128)):
                 #print ('N, T: %.2e %.f'%(Ncol_i, Tex_i))
                 tb1.append(self.get_intensity(lines[0], J1, Tex_i, Ncol_i, delv, 
                     lineprof=lineprof, mode=mode, Xconv=Xconv[0], Tbg=Tbg, return_tau=False, Tb=Tb))
