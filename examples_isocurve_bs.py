@@ -42,25 +42,24 @@ plot_sp_gd = True
 def cost_function(params, X, Y, model):
 
     # print("printing params", params)
-    N, T = params[0], params[1]
+    N, T = params[0]*1.e19, params[1]*50
     X_predicted = model.get_intensity(line = line, Ju = ilines[0], Ncol = N, Tex = T, delv = 0.5, Xconv = Xconv),
     Y_predicted = model.get_intensity(line = line, Ju = ilines[1], Ncol = N, Tex = T, delv = 0.5, Xconv = Xconv)
-    error = np.sum((X_predicted - X)**2 + (Y_predicted - Y)**2)
-    
-    
+    error = (X_predicted - X)**2 + (Y_predicted - Y)**2
+
     # print(error)
     return error
 
-def gradient(params, X, Y, model, h=[1e16, 1e-3] ):
+def gradient(params, X, Y, model, h=0.01):
     grad = np.zeros_like(params, dtype=float)  # Ensure the gradient array has the same data type as params
     for i in range(len(params)):
         params_plus_h = params.copy()
-        params_plus_h[i] = params_plus_h[i] + h[i]
+        params_plus_h[i] = params_plus_h[i] + h
         cost_plus_h = cost_function(params_plus_h, X, Y, model)
         params_minus_h = params.copy()
-        params_minus_h[i] = params_minus_h[i] - h[i]
+        params_minus_h[i] = params_minus_h[i] - h
         cost_minus_h = cost_function(params_minus_h, X, Y, model)
-        grad[i] = (cost_plus_h - cost_minus_h) / (2 * h[i])
+        grad[i] = (cost_plus_h - cost_minus_h) / (2 * h)
     return grad
 
 def gradient_descent(X, Y, initial_params, learning_rate, tolerance, max_iter, model):
@@ -93,11 +92,11 @@ for i in range(len(df_bs_os_gap)):
 
     print(f"Finding best fit for {i}th pair")
     parameters = gradient_descent(X = df_bs_os_gap["Tb_b7"][i], Y = df_bs_os_gap["Tb_b6"][i],
-                                    initial_params = np.array([1e17,30]), learning_rate = [1e5,0.01], tolerance = 1e-8, 
+                                    initial_params = np.array([1.e16/1.e19,30./50.]), learning_rate = 0.000001, tolerance = 1e-8, 
                                     max_iter = 100000, model = lte_model)
 
-    N_c_normal_gd.append(parameters[0])
-    T_e_normal_gd.append(parameters[-1])
+    N_c_normal_gd.append(parameters[0]*1.e19)
+    T_e_normal_gd.append(parameters[-1]*50.)
 
 print(N_c_normal_gd)
 print(T_e_normal_gd)
@@ -105,7 +104,7 @@ print(T_e_normal_gd)
 # Let's do another method
 
 print("Using scipy grad decent")
-initial_params = np.array([1e15, 30])
+initial_params = np.array([1.e15/1.e19, 30./50.])
 
 N_c_pred_gd_sp = []
 T_e_pred_gd_sp = []
@@ -116,8 +115,8 @@ for i in range(len(df_bs_os_gap)):
 
     print('Optimization successful: ', result.success)
     print("Cause - ", result.message)
-    N_c_pred_gd_sp.append(result.x[0])
-    T_e_pred_gd_sp.append(result.x[1])
+    N_c_pred_gd_sp.append(result.x[0]*1.e19)
+    T_e_pred_gd_sp.append(result.x[1]*50.)
 
 
 print(N_c_pred_gd_sp)
@@ -137,8 +136,8 @@ if plot_normal_gd:
 
     for i in range(len(N_c_normal_gd)):
 
-        Tb_7_pred_gd_normal.append(lte_model.get_intensity(line = line, Ju = ilines[0], Ncol = N_c_normal_gd[i]*5., Tex = T_e_normal_gd[i], delv = 0.5, Xconv=Xconv))
-        Tb_6_pred_gd_normal.append(lte_model.get_intensity(line = line, Ju = ilines[1], Ncol = N_c_normal_gd[i]*5., Tex = T_e_normal_gd[i], delv = 0.5, Xconv=Xconv))
+        Tb_7_pred_gd_normal.append(lte_model.get_intensity(line = line, Ju = ilines[0], Ncol = N_c_normal_gd[i], Tex = T_e_normal_gd[i], delv = 0.5, Xconv=Xconv))
+        Tb_6_pred_gd_normal.append(lte_model.get_intensity(line = line, Ju = ilines[1], Ncol = N_c_normal_gd[i], Tex = T_e_normal_gd[i], delv = 0.5, Xconv=Xconv))
 
     ax.scatter(Tb_7_pred_gd_normal, Tb_6_pred_gd_normal, color = 'green', marker = '^')
 
@@ -149,8 +148,8 @@ if plot_sp_gd:
 
     for i in range(len(N_c_pred_gd_sp)):
 
-        Tb_7_pred_gd_sp.append(lte_model.get_intensity(line = line, Ju = ilines[0], Ncol = N_c_pred_gd_sp[i]*5.e2, Tex = T_e_pred_gd_sp[i], delv = 0.5, Xconv=Xconv))
-        Tb_6_pred_gd_sp.append(lte_model.get_intensity(line = line, Ju = ilines[1], Ncol = N_c_pred_gd_sp[i]*5.e2, Tex = T_e_pred_gd_sp[i], delv = 0.5, Xconv=Xconv))
+        Tb_7_pred_gd_sp.append(lte_model.get_intensity(line = line, Ju = ilines[0], Ncol = N_c_pred_gd_sp[i], Tex = T_e_pred_gd_sp[i], delv = 0.5, Xconv=Xconv))
+        Tb_6_pred_gd_sp.append(lte_model.get_intensity(line = line, Ju = ilines[1], Ncol = N_c_pred_gd_sp[i], Tex = T_e_pred_gd_sp[i], delv = 0.5, Xconv=Xconv))
 
     ax.scatter(Tb_7_pred_gd_sp, Tb_6_pred_gd_sp, marker = '^', facecolors='none', edgecolors='k')
 
