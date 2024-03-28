@@ -146,8 +146,13 @@ class LTEAnalysis():
         EJu     = self.moldata[line]['EJ'][Ju]
 
         # partition function
-        Qrot = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'], 
-            self.moldata[line]['J'], Tex)
+        try:
+            Qrot = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'], 
+                self.moldata[line]['J'], Tex)
+        except RuntimeWarning as e:
+            print("Error in getting partition function")
+            print(e)
+            print(f"Line {line}, Ju = {Ju}, Texe = {Tex}, Ncol = {Ncol : .2e}")
 
         # N_H2 --> N_mol
         if Xconv: Ncol *= Xconv
