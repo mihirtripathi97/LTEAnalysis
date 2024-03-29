@@ -167,6 +167,7 @@ class LTEAnalysis():
         Iv = Bv(Tbg,freq_ul)*np.exp(-tau_v) + Bv(Tex, freq_ul)*(1. - np.exp(-tau_v))
         Iv -= Bv(Tbg,freq_ul)
 
+        print("In get intensity: ", Iv)
         if Tb:
             # equivalent brightness temperature
             return (clight*clight/(2.*freq_ul*freq_ul*kb))*Iv
