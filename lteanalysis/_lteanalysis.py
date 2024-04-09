@@ -471,7 +471,7 @@ class LTEAnalysis():
         change_aspect_ratio(ax, aspect)
 
         return fig, ax
-
+    
 # partition function
 def Pfunc(EJ, gJ, J, Tex):
     '''
