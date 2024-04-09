@@ -5,17 +5,20 @@ import emcee as em
 def log_likelihood(params, Y1, Y2, s1, s2, model):
     
     lg_N, T = params
-    N = np.log10(lg_N)     # We convert lg_N back to N
+    N = 10**lg_N     # We convert lg_N back to N
 
     # Y1 --> Tb(3-2), Y2 --> Tb(2-1)
     Y1_predicted = model.get_intensity(line = 'c18o', Ju = 3, Ncol = N, Tex = T, delv = 0.5, Xconv = 1.e-7)
     Y2_predicted = model.get_intensity(line = 'c18o', Ju = 2, Ncol = N, Tex = T, delv = 0.5, Xconv = 1.e-7)
 
+
+
     # Compute the log likelihood using normal distributions
-    log_likelihood_Y1 = -0.5 * np.sum(np.log(2 * np.pi * s1**2) + (Y1 - Y1_predicted)**2 / s1**2)
-    log_likelihood_Y2 = -0.5 * np.sum(np.log(2 * np.pi * s2**2) + (Y2 - Y2_predicted)**2 / s2**2)
+    log_likelihood_Y1 = -0.5 * (np.log(2 * np.pi * s1**2) + (Y1 - Y1_predicted)**2 / s1**2)
+    log_likelihood_Y2 = -0.5 * (np.log(2 * np.pi * s2**2) + (Y2 - Y2_predicted)**2 / s2**2)
     
-    return log_likelihood_Y1 + log_likelihood_Y2
+    lg_l = log_likelihood_Y1 + log_likelihood_Y2
+    return lg_l
 
 # Define the log prior function with variable bounds
 def log_prior(params, bounds):
