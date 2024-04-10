@@ -9,7 +9,7 @@ from astropy import constants
 current_path = os.getcwd()
 # Check if it is office computer or laptop and set path of imfits accordingly
 # Office computer
-if current_path.split(sep=":")[0] == "D":
+if current_path.split(sep=":")[0].lower() == "d":
     sys.path.append("D:\L1489_IRS_ssp\imfits")
     from imfits.drawmaps import AstroCanvas
     from imfits import Imfits
@@ -32,7 +32,7 @@ class pv_analyze:
     PA = 69.0  # PA im degree
     M_star = 1.6  # Mass of star in units of M_sun
     distanc_pc = 140.0  # Distance of object in parsec
-    v_sys = 7.3  # Systemic velocity in kmps
+    v_sys = 7.22  # Systemic velocity in kmps
 
     def __init__(self, pv_path=None, is_Tb=True, line_name="J_2_1"):
 
@@ -42,12 +42,17 @@ class pv_analyze:
         self.rms = None  # Root mean squared error of PV
         self.pv_data = None  # 2D PV image data extracted from self.pv
         self.v_obs = None  # Observed velocities
-        self.v_rot = None  # Observed velocities converted to rotational velocities (v_rot = V_obs - Vsys)
-        self.v_rot_redshifted = None  # Redshifted (positive) rotational velocities for points on curve, cropped till the extent of PV plot
-        self.v_rot_blueshifted = None  # Blueshifted (positive) rotational velocities for points on curve, cropped till the extent of PV plot
+        # Observed velocities converted to rotational velocities (v_rot = V_obs - Vsys)
+        self.v_rot = None
+        # Redshifted (positive) rotational velocities for points on curve, cropped till the extent of PV plot
+        self.v_rot_redshifted = None
+        # Blueshifted (positive) rotational velocities for points on curve, cropped till the extent of PV plot
+        self.v_rot_blueshifted = None
         self.x_axis = None  # Observed x values (in arcec)
-        self.r_as_rs = None  # x coordinates of Keplerian or other Curve points in redshifted side (in arcsec)
-        self.r_as_bs = None  # x coordinates of Keplerian or other Curve points in blue shifted side (in arcsec)
+        # x coordinates of Keplerian or other Curve points in redshifted side (in arcsec)
+        self.r_as_rs = None
+        # x coordinates of Keplerian or other Curve points in blue shifted side (in arcsec)
+        self.r_as_bs = None
 
     def read_pv(self, print_details=True):
         """
@@ -138,28 +143,8 @@ class pv_analyze:
 
         else:
             # use 2D keplerian velocity profile
-            r_au_rs = (
-                self.G_grav
-                * self.M_star
-                * self.M_sun
-                / (
-                    self.v_rot_redshifted
-                    * 1.0e3
-                    / np.sin(self.inclination * np.pi / 180.0)
-                )
-                ** 2
-            ) / 1.496e11
-            r_au_bs = (
-                self.G_grav
-                * self.M_star
-                * self.M_sun
-                / (
-                    self.v_rot_blueshifted
-                    * 1.0e3
-                    / np.sin(self.inclination * np.pi / 180.0)
-                )
-                ** 2
-            ) / 1.496e11
+            r_au_rs = (self.G_grav*self.M_star*self.M_sun/ (self.v_rot_redshifted* 1.0e3/ np.sin(self.inclination * np.pi / 180.0))** 2) / 1.496e11
+            r_au_bs = (self.G_grav* self.M_star* self.M_sun/ (self.v_rot_blueshifted* 1.0e3/ np.sin(self.inclination * np.pi / 180.0))** 2) / 1.496e11
 
         # Convert raddial coordinates to arcsec
         # (for points in redshifted side) radial distance from star in arcsec
@@ -259,8 +244,44 @@ class pv_analyze:
 
         return data_cube
 
-    def plot_pv(self, plot_curve=None, **kwargs):
+    def plot_pv(self, plot_curve: bool = False, **kwargs):
         """
         Plots PV diagram and overplots curve points if `plot_curve` is True. Returns the fig, axes object.
         """
         # Work in progress
+
+        canvas = AstroCanvas((1, 1))
+        pv_plot = canvas.pvdiagram(
+            self.pv,
+            vrel=True,
+            color=True,
+            cmap="inferno",
+            vmin=-2.0,
+            vmax=14.0,
+            contour=True,
+            clip=0.0000000,
+            ylim=[-8.5, 6.5],
+            clevels=np.array([3, 7, 10, 15, 25, 35, 45]) * self.rms,
+            # If true, offset (radial distance from star) will be the x axis
+            x_offset=True,
+            vsys=self.v_sys,  # systemic velocity
+            # plot vertical center (systemic velocity)
+            ln_var=True,
+            # plot horizontal center (zero offset)
+            ln_hor=True,
+            cbaroptions=("right", "3%", "3%"),
+            cbarlabel=r"(Jy beam$^{-1})$",
+            colorbar=True,
+        )
+
+        if plot_curve:
+            pv_plot[0].scatter(self.r_as_rs,self.v_rot_redshifted, c='red')
+            pv_plot[0].scatter(self.r_as_bs,self.v_rot_blueshifted,  c ='blue')
+        
+        # plot extracted indices
+            pv_plot[0].scatter(self.x_axis[self.r_as_rs_idx],self.v_obs[self.vidx_rs] - self.v_sys,  marker = 'x', color = 'k')
+            pv_plot[0].scatter(self.x_axis[self.r_as_bs_idx],self.v_obs[self.vidx_bs] - self.v_sys,  marker = 'x', color = 'white')
+
+
+
+        return pv_plot

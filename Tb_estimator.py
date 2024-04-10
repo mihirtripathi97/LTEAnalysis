@@ -40,7 +40,8 @@ def log_posterior(params, Y1, Y2, s1, s2, bounds, model):
 
 def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc', 'scipy'},
                     initial_params:list = None, bounds:list = None, args:dict = None,
-                    nwalkers:int = 100, n_steps:int = 1000, burn_in:int = 100, thin_by:int = 15, intensity_model = None) -> dict :
+                    nwalkers:int = 100, n_steps:int = 1000, burn_in:int = 100, thin_by:int = 15, 
+                    return_flat:bool = False, intensity_model = None) -> dict :
     """
     mcmc estimator
     For now let's make sure that N is supplied as log_10(N)
@@ -72,7 +73,7 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
             # samples = sampler.get_chain()
 
             # Flatten samples for further analysis
-            flattened_samples = sampler.get_chain(discard=burn_in, thin=thin_by, flat=True)
+            flattened_samples = sampler.get_chain(discard=burn_in, thin=thin_by, flat=return_flat)
 
             return flattened_samples
                 
