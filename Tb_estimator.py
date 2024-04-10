@@ -39,7 +39,7 @@ def log_posterior(params, Y1, Y2, s1, s2, bounds, model):
 
 
 def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc', 'scipy'},
-                    initial_params:list = None, bounds:list = None, args:dict = None,
+                    initial_params:list = None, bounds:list = None, args:dict = None, initial_scatter:float = 0.1,
                     nwalkers:int = 100, n_steps:int = 1000, burn_in:int = 100, thin_by:int = 15, 
                     return_flat:bool = False, intensity_model = None) -> dict :
     """
