@@ -1,6 +1,7 @@
 import numpy as np
 import emcee as em
-
+import matplotlib.pyplot as plt
+import os
 
 def log_likelihood(params, Y1, Y2, s1, s2, model):
     
@@ -41,7 +42,8 @@ def log_posterior(params, Y1, Y2, s1, s2, bounds, model):
 def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc', 'scipy'},
                     initial_params:list = None, bounds:list = None, args:dict = None, initial_scatter:float = 0.1,
                     nwalkers:int = 100, n_steps:int = 1000, burn_in:int = 100, thin_by:int = 15, 
-                    return_flat:bool = False, intensity_model = None) -> dict :
+                    return_flat:bool = False, intensity_model = None, plot_chain:bool=True, 
+                    r_v_info:list=[], chain_plot_path:str='', show_chains:bool = False) -> dict :
     """
     mcmc estimator
     For now let's make sure that N is supplied as log_10(N)
@@ -56,6 +58,7 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
     estimator   :   `str`, Type of estimator 
     """
     if estimator == 'mcmc':
+
         if isinstance(t1, float) and isinstance(t2, float):
             
             ndim = len(initial_params)
@@ -70,14 +73,56 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
             sampler.run_mcmc(p0, n_steps, progress=True)
 
             # Extract samples
-            # samples = sampler.get_chain()
 
-            # Flatten samples for further analysis
+            samples = sampler.get_chain()
+
+            if plot_chain:
+
+                # Extract log likelihood values for each walker for all chains
+                log_likelihood_values = np.zeros((nwalkers, n_steps))
+
+                for i in range(nwalkers):
+                    for j in range(n_steps):
+                        params = samples[j, i]
+                        log_likelihood_values[i, j] = log_likelihood(params, t1, t2, s1, s2, intensity_model)
+
+                fig, axes = plt.subplots(3, figsize=(10, 7), sharex=True)
+
+
+                labels = ["lg_N", "T"]
+                
+                for i in range(2):
+                    ax = axes[i]
+                    for j in range(nwalkers):
+                        ax.plot(samples[:, j, i], alpha=0.3)
+                    ax.set_xlim(0, len(samples))
+                    ax.set_ylabel(labels[i])
+
+                for j in range(nwalkers):
+                    axes[2].plot(log_likelihood_values[j])
+
+                axes[2].set_ylabel('log_likelihood')
+
+                axes[-1].set_xlabel("step number")
+
+                fig.suptitle('chains_r_'+r_v_info[0]+'_v_'+r_v_info[-1])
+
+                figname = 'chain_r_'+r_v_info[0]+'_v_'+r_v_info[-1]+'.jpg'
+                figpath = os.path.join(chain_plot_path, figname)
+                fig.savefig(fname = figpath, dpi=300, format='jpeg')
+
+                if show_chains:
+                    plt.show()
+
+                plt.close()
+            # Now flatten chains for further analysis
+            
             flattened_samples = sampler.get_chain(discard=burn_in, thin=thin_by, flat=return_flat)
 
-            return flattened_samples
-                
-            
+            # autocorr_values = sampler.get_autocorr_time()
+
+            return flattened_samples, 1
+                        
         else:
             print("Case where t1 and t2 are iterable is not yet implemented. Work in progress.")
             return

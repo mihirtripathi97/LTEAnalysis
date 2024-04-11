@@ -448,7 +448,7 @@ class LTEAnalysis():
                     lineprof=lineprof, mode=mode, Xconv=Xconv[1], Tbg=Tbg, return_tau=False, Tb=Tb))
 
             ax.plot(tb1, tb2, c=cm.coolwarm(float(i+1)/len(Texes)), lw=lw)
-            ax.text(x = tb1[st_idx],y=tb2[st_idx], c =cm.Dark2(float(i+1)/len(Texes)), s = str(Tex_i)+"K",fontsize = 15)
+            ax.text(x = tb1[st_idx],y=tb2[st_idx], c =cm.Dark2(float(i+1)/len(Texes)), s = str(round(Tex_i,2))+"K",fontsize = 15)
             #st_idx = int(st_idx/(i+1))
 
         # iso-density curves
