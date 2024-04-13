@@ -46,7 +46,6 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
                     r_v_info:list=[], chain_plot_path:str='', show_chains:bool = False) -> dict :
     """
     mcmc estimator
-    For now let's make sure that N is supplied as log_10(N)
 
     Parameters:
     -----------
@@ -108,6 +107,9 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
                 fig.suptitle('chains_r_'+r_v_info[0]+'_v_'+r_v_info[-1])
 
                 figname = 'chain_r_'+r_v_info[0]+'_v_'+r_v_info[-1]+'.jpg'
+                
+                if not os.path.isdir(chain_plot_path):
+                    os.mkdir(chain_plot_path)
                 figpath = os.path.join(chain_plot_path, figname)
                 fig.savefig(fname = figpath, dpi=300, format='jpeg')
 

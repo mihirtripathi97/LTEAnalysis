@@ -90,31 +90,41 @@ class pv_analyze:
         return _idx
 
     def _get_pixel_vidx_on_curve(self, v_obs=None, v_rot=None, v_sys=None, v_tol=None):
-        # Find velocity indices of rs and bs (we try to find v_obs which are equal to v_rot_bs + v_sys with a tolerance of 0.05 kmps as velocity channels are seperated by 0.2 kmps) )
-        _idx = np.where(np.abs(v_obs[:, None] - (v_rot + v_sys)) <= v_tol)[0]
+        # Find velocity indices of rs and bs (we try to find v_obs which are equal to 
+        # v_rot_bs + v_sys with a tolerance of 0.05 kmps as velocity channels are seperated by 0.2 kmps) )
+        v_sum = v_rot + v_sys
+        _idx = [np.abs(v_obs - v).argmin() for v in v_sum]
+        # _idx = np.where(np.abs(v_obs[:, None] - (v_rot + v_sys)) <= v_tol)[0]
         return _idx
 
     def get_tb_on_curve(
         self,
-        curve_function=None,
-        get_surrounding_pix=False,
-        num_pix=None,
-        cf_kwargs=None,
+        mode:str = {'func', 'vals'},
+        curve_function:list = None,
+        get_surrounding_pix:bool = False,
+        get_pix_along:str = {'r','v'},
+        num_pix:int = 4,
+        return_avg:bool = True,
+        cf_kwargs = None,
     ) -> dict[np.ndarray, np.ndarray]:
         """
         Returns a pandas dataframe where each column is a temperature at pixels on/surrounding the curve points in each velocity channel
 
         Parameters:
         -----------
-
-        curve_function      :   `callable`, optional, default: None,
+        mode                :   `str`, {'func', 'vals'}, whether the curve function is a funcrion or list of rs and vs
+        curve_function      :   `callable` or list, optional, default: None,
                                 A function f(v_rotational) -> r, typically an inverse of kepler velocity function.
                                 It provides angular distance `r` at which one should expect the emission comming from material rotating at
                                 keplerian velocities. More generally, a function that returs r coordinates in units of AU
                                 wrt center of disk for given velocity channels.
                                 Default - a inverse kepler function GM/(v_rot**2) --> r
 
+                                If mode = 'vals', then a list of lists, specifying r and v values in following order
+                                [r_rs (au)] , [v_rs (kmps)], [r_bs (au)], [v_bs (kmps)]
+
         get_surrounding_pix :   `bool`, optional, If True then returns dataframe with Tb values in surrounding `num_pix` pixels
+        get_pix_along       :   `str`, `r` | `v`, optional, whether to get pixels alnong fix r or fix v
         num_pix             :   `int` or `None`, optional, default: None, number of pixels around the pixel on which curve points fall for which Tb values are to be returned
         cf_kwargs           :    dict, optional,
                                  dictionary of other arguments needed to evaluet the `cost_function()`
@@ -132,20 +142,28 @@ class pv_analyze:
 
         """
 
-        # NOTE - We can define keplerian curve_function as internal function and make following section smaller
         # Get radial corrdinates of point on given curve in units of AU
-        if curve_function is not None:
-            # using a customized function to find r_au corresponding to observed velocity channels
-            r_au_rs = curve_function(self.v_rot_redshifted, **cf_kwargs)
-            r_au_bs = -1.0 * curve_function(self.v_rot_blueshifted, **cf_kwargs)
-            # r_au_rs = 100*pow(base = v_100/v_rot_redshifted, exp=2)
-            # r_au_bs = -100*pow(base = v_100/v_rot_blueshifted, exp=2)
+        if mode.lower() == 'func':
+        
+            if curve_function is not None:
+                # using a customized function to find r_au corresponding to observed velocity channels
+                r_au_rs = curve_function(self.v_rot_redshifted, **cf_kwargs)
+                r_au_bs = -1.0 * curve_function(self.v_rot_blueshifted, **cf_kwargs)
 
+            else:
+                # use 2D keplerian velocity profile
+                r_au_rs = (self.G_grav*self.M_star*self.M_sun/ (self.v_rot_redshifted* 1.0e3/ np.sin(self.inclination * np.pi / 180.0))** 2) / 1.496e11
+                r_au_bs = (self.G_grav* self.M_star* self.M_sun/ (self.v_rot_blueshifted* 1.0e3/ np.sin(self.inclination * np.pi / 180.0))** 2) / 1.496e11
+        
+        elif mode.lower() == 'vals':
+
+            r_au_rs, self.v_rot_redshifted  = curve_function[0], curve_function[1]
+            r_au_bs, self.v_rot_blueshifted = curve_function[2], curve_function[3]
+        
         else:
-            # use 2D keplerian velocity profile
-            r_au_rs = (self.G_grav*self.M_star*self.M_sun/ (self.v_rot_redshifted* 1.0e3/ np.sin(self.inclination * np.pi / 180.0))** 2) / 1.496e11
-            r_au_bs = (self.G_grav* self.M_star* self.M_sun/ (self.v_rot_blueshifted* 1.0e3/ np.sin(self.inclination * np.pi / 180.0))** 2) / 1.496e11
-
+            print("Please specify currect mode.")
+            return 0
+        
         # Convert raddial coordinates to arcsec
         # (for points in redshifted side) radial distance from star in arcsec
         self.r_as_rs = r_au_rs / self.distanc_pc
@@ -173,6 +191,8 @@ class pv_analyze:
         self.vidx_rs = self._get_pixel_vidx_on_curve(
             v_obs=self.v_obs, v_rot=self.v_rot_redshifted, v_sys=self.v_sys, v_tol=0.005
         )
+
+
         self.vidx_bs = self._get_pixel_vidx_on_curve(
             v_obs=self.v_obs,
             v_rot=self.v_rot_blueshifted,
@@ -180,11 +200,13 @@ class pv_analyze:
             v_tol=0.005,
         )
 
-        # self.pv.data has a redundant z axis of length one since we are considering only one stokes axis
+        # self.pv.data has a redundant z axis of length one. 
+        # Since we are considering that image have only one stokes axis. Let's get rid of that
         self.pv_data = self.pv.data[0]
 
         if get_surrounding_pix:
 
+            # NOTE: not yet tested properly 
             if num_pix is None or not isinstance(num_pix, int):
                 raise TypeError(
                     "`num_pix` has to be an integer to get the Tb from surrounding pixels"
@@ -193,36 +215,40 @@ class pv_analyze:
             tb_sur_pt_rs = []
             tb_sur_pt_bs = []
 
-            # Geather it for bs side
+            # Geather Tb values along redshifted side
             for pt_v_idx, pt_r_idx in zip(self.vidx_bs, self.r_as_bs_idx):
 
-                # if max_pix_along_r:
-
-                # elif max_pix_along_v:
-
                 # else:
                 tb_surroundings = []
 
                 for i in range(-num_pix, num_pix):
 
-                    tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
-
-                tb_sur_pt_bs.append(tb_surroundings)
-
+                    if get_pix_along == 'r':
+                        tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
+                    elif get_pix_along == 'v':
+                        tb_surroundings.append(float(self.pv_data[pt_v_idx+i, pt_r_idx]))
+                
+                if return_avg:
+                    tb_sur_pt_bs.append(np.mean(tb_surroundings))
+                else:
+                    tb_sur_pt_bs.append(tb_surroundings)
+            
+            # Geather Tb values along redshifted side
             for pt_v_idx, pt_r_idx in zip(self.vidx_rs, self.r_as_rs_idx):
 
-                # if max_pix_along_r:
-
-                # elif max_pix_along_v:
-
-                # else:
                 tb_surroundings = []
 
                 for i in range(-num_pix, num_pix):
 
-                    tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
-
-                tb_sur_pt_rs.append(tb_surroundings)
+                    if get_pix_along == 'r':
+                        tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
+                    elif get_pix_along == 'v':
+                        tb_surroundings.append(float(self.pv_data[pt_v_idx+i, pt_r_idx]))
+                
+                if return_avg:
+                    tb_sur_pt_rs.append(np.mean(tb_surroundings))
+                else:
+                    tb_sur_pt_rs.append(tb_surroundings)
 
             data_cube = {"Tb_sur_pt_rs": tb_sur_pt_rs, "Tb_sur_pt_bs": tb_sur_pt_bs}
 
@@ -278,10 +304,9 @@ class pv_analyze:
             pv_plot[0].scatter(self.r_as_rs,self.v_rot_redshifted, c='red')
             pv_plot[0].scatter(self.r_as_bs,self.v_rot_blueshifted,  c ='blue')
         
-        # plot extracted indices
+        
+        # mark extracted pixels
             pv_plot[0].scatter(self.x_axis[self.r_as_rs_idx],self.v_obs[self.vidx_rs] - self.v_sys,  marker = 'x', color = 'k')
             pv_plot[0].scatter(self.x_axis[self.r_as_bs_idx],self.v_obs[self.vidx_bs] - self.v_sys,  marker = 'x', color = 'white')
-
-
 
         return pv_plot
