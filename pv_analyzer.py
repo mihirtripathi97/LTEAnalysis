@@ -105,8 +105,9 @@ class pv_analyze:
         get_pix_along:str = {'r','v'},
         num_pix:int = 4,
         return_avg:bool = True,
+        return_coords:bool = True,
         cf_kwargs = None,
-    ) -> dict[np.ndarray, np.ndarray]:
+        ) -> dict[np.ndarray, np.ndarray]:
         """
         Returns a pandas dataframe where each column is a temperature at pixels on/surrounding the curve points in each velocity channel
 
@@ -126,6 +127,7 @@ class pv_analyze:
         get_surrounding_pix :   `bool`, optional, If True then returns dataframe with Tb values in surrounding `num_pix` pixels
         get_pix_along       :   `str`, `r` | `v`, optional, whether to get pixels alnong fix r or fix v
         num_pix             :   `int` or `None`, optional, default: None, number of pixels around the pixel on which curve points fall for which Tb values are to be returned
+        return_coords       :   `bool`, If true, returning dataframe will have coordinates (r and v vals)
         cf_kwargs           :    dict, optional,
                                  dictionary of other arguments needed to evaluet the `cost_function()`
 
@@ -139,6 +141,11 @@ class pv_analyze:
 
                                 - column1: numpy.ndarray
                                 - column2: numpy.ndarray
+
+                                if return_coords = True,
+
+                                - column3 ("r"): numpy.ndarray
+                                - column4 ("v"): numpy.ndarray
 
         """
 
@@ -161,10 +168,10 @@ class pv_analyze:
             r_au_bs, self.v_rot_blueshifted = curve_function[2], curve_function[3]
         
         else:
-            print("Please specify currect mode.")
+            print("Please specify correct mode.")
             return 0
         
-        # Convert raddial coordinates to arcsec
+        # Convert radial coordinates to arcsec
         # (for points in redshifted side) radial distance from star in arcsec
         self.r_as_rs = r_au_rs / self.distanc_pc
         # (for points in blueshifted side) radial distance from star in arcsec
@@ -215,7 +222,7 @@ class pv_analyze:
             tb_sur_pt_rs = []
             tb_sur_pt_bs = []
 
-            # Geather Tb values along redshifted side
+            # Geather Tb values along blueshifted side
             for pt_v_idx, pt_r_idx in zip(self.vidx_bs, self.r_as_bs_idx):
 
                 # else:
@@ -263,10 +270,17 @@ class pv_analyze:
             for pt_v_idx, pt_r_idx in zip(self.vidx_bs, self.r_as_bs_idx):
                 tb_on_point_bs.append(float(self.pv_data[pt_v_idx, pt_r_idx]))
 
-            data_cube = {
-                "Tb_on_point_rs": tb_on_point_rs,
-                "Tb_on_point_bs": tb_on_point_bs,
-            }
+        data_cube = {
+                    "Tb_on_point_rs": tb_on_point_rs,
+                    "Tb_on_point_bs": tb_on_point_bs
+                    }
+        if return_coords:
+            data_cube["r_rs"] = self.r_as_rs
+            data_cube["r_bs"] = self.r_as_bs
+            data_cube["v_rs"] = self.v_rot_redshifted
+            data_cube["v_bs"] = self.v_rot_blueshifted
+                
+
 
         return data_cube
 
