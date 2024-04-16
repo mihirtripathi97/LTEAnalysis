@@ -2,6 +2,8 @@ import numpy as np
 import emcee as em
 import matplotlib.pyplot as plt
 import os
+from scipy.optimize import minimize
+from scipy.optimize import Bounds
 
 def log_likelihood(params, Y1, Y2, s1, s2, model):
     
@@ -11,8 +13,6 @@ def log_likelihood(params, Y1, Y2, s1, s2, model):
     # Y1 --> Tb(3-2), Y2 --> Tb(2-1)
     Y1_predicted = model.get_intensity(line = 'c18o', Ju = 3, Ncol = N, Tex = T, delv = 0.5, Xconv = 1.e-7)
     Y2_predicted = model.get_intensity(line = 'c18o', Ju = 2, Ncol = N, Tex = T, delv = 0.5, Xconv = 1.e-7)
-
-
 
     # Compute the log likelihood using normal distributions
     log_likelihood_Y1 = -0.5 * (np.log(2 * np.pi * s1**2) + (Y1 - Y1_predicted)**2 / s1**2)
@@ -39,7 +39,7 @@ def log_posterior(params, Y1, Y2, s1, s2, bounds, model):
 
 
 
-def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc', 'scipy'},
+def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc', 'scipy', 'both'},
                     initial_params:list = None, bounds:list = None, args:dict = None, initial_scatter:float = 0.1,
                     nwalkers:int = 100, n_steps:int = 1000, burn_in:int = 100, thin_by:int = 15, 
                     return_flat:bool = False, intensity_model = None, plot_chain:bool=True, 
@@ -56,6 +56,13 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
     s2          :   `float`, sigma for t2
     estimator   :   `str`, Type of estimator 
     """
+    if estimator == 'scipy':
+
+        result = minimize(cost_function, initial_params, args=(df_blue["Tb_on_pix_b7"][i], df_blue["Tb_on_pix_b6"][i], lte_model),
+                        method='Nelder-Mead', bounds = bounds, options={'xatol': 1e-12, 'maxiter' : 10000})
+
+
+
     if estimator == 'mcmc':
 
         if isinstance(t1, float) and isinstance(t2, float):
