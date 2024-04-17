@@ -122,8 +122,8 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
 
                 if show_chains:
                     plt.show()
-
-                plt.close()
+                else:
+                    plt.close()
             # Now flatten chains for further analysis
             
             flattened_samples = sampler.get_chain(discard=burn_in, thin=thin_by, flat=return_flat)
