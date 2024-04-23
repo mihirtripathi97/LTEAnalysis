@@ -428,6 +428,20 @@ class LTEAnalysis():
             print("ERROR\tget_grid: Xconv must be float or list with two elements.")
             return 0
 
+        if type(delv) is float:
+            delv = [delv, delv]
+        elif type(delv) is list:
+            if len(delv) != 2:
+                print("ERROR\tget_grid: More than two elements are given for 'delv'.")
+                print("ERROR\tget_grid: delv must be a float or a list with two elements.")
+            else:
+                pass 
+        else:
+            print("ERROR\tget_grid: Type of 'delv' is wrong.")
+            print("ERROR\tget_grid: delv must be float or list with two elements.")
+            return 0
+
+
         # figure
         if (fig is None) and (ax is None):
             fig = plt.figure() #figsize=(11.69, 8.27))
@@ -442,9 +456,9 @@ class LTEAnalysis():
             tb2 = []
             for j, Ncol_i in enumerate(np.logspace(np.log10(np.min(Ncols)), np.log10(np.max(Ncols)),128)):
                 #print ('N, T: %.2e %.f'%(Ncol_i, Tex_i))
-                tb1.append(self.get_intensity(lines[0], J1, Tex_i, Ncol_i, delv, 
+                tb1.append(self.get_intensity(lines[0], J1, Tex_i, Ncol_i, delv[0], 
                     lineprof=lineprof, mode=mode, Xconv=Xconv[0], Tbg=Tbg, return_tau=False, Tb=Tb))
-                tb2.append(self.get_intensity(lines[1], J2, Tex_i, Ncol_i, delv, 
+                tb2.append(self.get_intensity(lines[1], J2, Tex_i, Ncol_i, delv[1], 
                     lineprof=lineprof, mode=mode, Xconv=Xconv[1], Tbg=Tbg, return_tau=False, Tb=Tb))
 
             ax.plot(tb1, tb2, c=cm.coolwarm(float(i+1)/len(Texes)), lw=lw)

@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from astropy import constants
-
+from scipy.interpolate import CubicSpline
+from typing import Union, Literal
 
 current_path = os.getcwd()
 # Check if it is office computer or laptop and set path of imfits accordingly
@@ -27,17 +28,19 @@ class pv_analyze:
     G_grav = constants.G.value  # Gravitational constant (MKS)
     M_sun = constants.M_sun.value  # Solar mass (Kg)
 
-    obj_name = "L1489_irs"
-    inclination = 73.0  # Inclination in degree
-    PA = 69.0  # PA im degree
-    M_star = 1.6  # Mass of star in units of M_sun
-    distanc_pc = 140.0  # Distance of object in parsec
-    v_sys = 7.22  # Systemic velocity in kmps
 
-    def __init__(self, pv_path=None, is_Tb=True, line_name="J_2_1"):
+    def __init__(self, pv_path=None, is_Tb:bool=True, line_name:str="J_2_1",
+                 obj_name:str = "L1489_irs", inclination:float = 73.0, PA:float = 69.0,
+                 M_star:float = 1.6, distance_pc:float = 140.0, v_sys:float = 7.22):
 
         self.pv_path = pv_path
         self.is_Tb = is_Tb
+        self.obj_name = obj_name
+        self.inclination = inclination  # Inclination in degree
+        self.PA = PA  # PA im degree
+        self.M_star = M_star  # Mass of star in units of M_sun
+        self.distance_pc = distance_pc  # Distance of object in parsec
+        self.v_sys = v_sys  # Systemic velocity in kmps
         self.pv = None  # Imfits PV object
         self.rms = None  # Root mean squared error of PV
         self.pv_data = None  # 2D PV image data extracted from self.pv
@@ -99,12 +102,13 @@ class pv_analyze:
 
     def get_tb_on_curve(
         self,
-        mode:str = {'func', 'vals'},
+        mode:Union[str, Literal['func', 'vals']] = 'func',
         curve_function:list = None,
         get_surrounding_pix:bool = False,
-        get_pix_along:str = {'r','v'},
+        get_pix_along: Union[str, Literal['r', 'v']] = 'r',
         num_pix:int = 4,
         return_avg:bool = True,
+        return_interp_mean:bool = True,
         return_coords:bool = True,
         cf_kwargs = None,
         ) -> dict[np.ndarray, np.ndarray]:
@@ -123,9 +127,10 @@ class pv_analyze:
 
                                 If mode = 'vals', then a list of lists, specifying r and v values in following order
                                 [r_rs (au)] , [v_rs (kmps)], [r_bs (au)], [v_bs (kmps)]
-
+        return_interp_mean  :   `bool`, If true then interpolates (cubic spline) flux values along pixels in specified direction (according to value in 
+                                `get_pix_along`) and returns flux at location of points using the interpolated curve.
         get_surrounding_pix :   `bool`, optional, If True then returns dataframe with Tb values in surrounding `num_pix` pixels
-        get_pix_along       :   `str`, `r` | `v`, optional, whether to get pixels alnong fix r or fix v
+        get_pix_along       :   `str`, `r` | `v`, optional, whether to get pixels along fix r or fix v
         num_pix             :   `int` or `None`, optional, default: None, number of pixels around the pixel on which curve points fall for which Tb values are to be returned
         return_coords       :   `bool`, If true, returning dataframe will have coordinates (r and v vals)
         cf_kwargs           :    dict, optional,
@@ -137,7 +142,8 @@ class pv_analyze:
 
         Tb_cube             :   `pandas.DataFrame`,
 
-                                With columns "Tb_on_pt_rs" and "Tb_on_pt_bs" if `get_surrounding_pix` is `False` or with columns "Tb_sur_pt_rs" and "Tb_sur_pt_bs", if `get_surrounding_pix` is `True`
+                                With columns "Tb_on_pt_rs" and "Tb_on_pt_bs" if `get_surrounding_pix` is `False` or 
+                                with columns "Tb_sur_pt_rs" and "Tb_sur_pt_bs", if `get_surrounding_pix` is `True`
 
                                 - column1: numpy.ndarray
                                 - column2: numpy.ndarray
@@ -149,7 +155,8 @@ class pv_analyze:
 
         """
 
-        # Get radial corrdinates of point on given curve in units of AU
+        # Get radial coordinates of point on given curve in units of AU
+        # if function r = f(v) of the curve is supplied
         if mode.lower() == 'func':
         
             if curve_function is not None:
@@ -162,6 +169,7 @@ class pv_analyze:
                 r_au_rs = (self.G_grav*self.M_star*self.M_sun/ (self.v_rot_redshifted* 1.0e3/ np.sin(self.inclination * np.pi / 180.0))** 2) / 1.496e11
                 r_au_bs = -1.0 * (self.G_grav* self.M_star* self.M_sun/ (self.v_rot_blueshifted* 1.0e3/ np.sin(self.inclination * np.pi / 180.0))** 2) / 1.496e11
         
+        # if coordinates of curve is supplied
         elif mode.lower() == 'vals':
 
             r_au_rs, self.v_rot_redshifted  = curve_function[0], curve_function[1]
@@ -173,9 +181,9 @@ class pv_analyze:
         
         # Convert radial coordinates to arcsec
         # (for points in redshifted side) radial distance from star in arcsec
-        self.r_as_rs = r_au_rs / self.distanc_pc
+        self.r_as_rs = r_au_rs / self.distance_pc
         # (for points in blueshifted side) radial distance from star in arcsec
-        self.r_as_bs = r_au_bs / self.distanc_pc
+        self.r_as_bs = r_au_bs / self.distance_pc
 
         # dropping r larger then rmax of pv image and corresponding Vs as well
         self.v_rot_redshifted, self.r_as_rs = (
@@ -198,8 +206,6 @@ class pv_analyze:
         self.vidx_rs = self._get_pixel_vidx_on_curve(
             v_obs=self.v_obs, v_rot=self.v_rot_redshifted, v_sys=self.v_sys, v_tol=0.005
         )
-
-
         self.vidx_bs = self._get_pixel_vidx_on_curve(
             v_obs=self.v_obs,
             v_rot=self.v_rot_blueshifted,
@@ -222,44 +228,90 @@ class pv_analyze:
             tb_sur_pt_rs = []
             tb_sur_pt_bs = []
 
-            # Geather Tb values along blueshifted side
-            for pt_v_idx, pt_r_idx in zip(self.vidx_bs, self.r_as_bs_idx):
+            # Gather Tb values along blueshifted side
+            for idx, (pt_v_idx, pt_r_idx) in enumerate(zip(self.vidx_bs, self.r_as_bs_idx)):
 
                 # else:
                 tb_surroundings = []
+                tb_sur_x_points = []
 
                 for i in range(-num_pix, num_pix):
 
                     if get_pix_along == 'r':
-                        tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
+                        if pt_r_idx + i < 0 or pt_r_idx + i >= len(self.x_axis):     # takes care of cases when our point is on edge of image
+                            continue
+                        else:
+                            tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
+                            tb_sur_x_points.append(float(self.x_axis[pt_r_idx + i]))
+
                     elif get_pix_along == 'v':
-                        tb_surroundings.append(float(self.pv_data[pt_v_idx+i, pt_r_idx]))
-                
+                        if pt_v_idx + i < 0 or pt_v_idx + i >= len(self.v_obs):     # takes care of cases when our point is on edge of image
+                            continue
+                        else:
+                            tb_surroundings.append(float(self.pv_data[pt_v_idx+i, pt_r_idx]))
+                            tb_sur_x_points.append(float(self.v_obs[pt_v_idx+i]-self.v_sys))
+                    
+                    else:
+                        raise ValueError("Only 'r' or 'v' are correct values for `get_pix_along` argument.")
+                    
                 if return_avg:
-                    tb_sur_pt_bs.append(np.mean(tb_surroundings))
+
+                    # interpolate Tb values from surrounding pixel values
+                    if return_interp_mean:
+
+                        local_flux_fun = CubicSpline(tb_sur_x_points, tb_surroundings)
+                        
+                        if get_pix_along == 'r':
+                            tb_sur_pt_bs.append(local_flux_fun(self.r_as_bs[idx]))
+                        else:
+                            tb_sur_pt_bs.append(local_flux_fun(self.v_rot_blueshifted[idx]))
+                    
+                    # just return the mean from pixel values
+                    else:
+                        tb_sur_pt_bs.append(np.mean(tb_surroundings))
                 else:
                     tb_sur_pt_bs.append(tb_surroundings)
             
-            # Geather Tb values along redshifted side
-            for pt_v_idx, pt_r_idx in zip(self.vidx_rs, self.r_as_rs_idx):
+            # Gather Tb values along redshifted side
+            for idx, (pt_v_idx, pt_r_idx) in enumerate(zip(self.vidx_rs, self.r_as_rs_idx)):
 
                 tb_surroundings = []
+                tb_sur_x_points = []
 
                 for i in range(-num_pix, num_pix):
-
+                    
                     if get_pix_along == 'r':
-                        tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
+                        if pt_r_idx + i < 0 or pt_r_idx + i >= len(self.x_axis):     # takes care of cases when our point is on edge of image
+                            continue
+                        else:
+                            tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
+                            tb_sur_x_points.append(float(self.x_axis[pt_r_idx + i]))
+
                     elif get_pix_along == 'v':
-                        tb_surroundings.append(float(self.pv_data[pt_v_idx+i, pt_r_idx]))
+                        if pt_v_idx + i < 0 or pt_v_idx + i >= len(self.v_obs):     # takes care of cases when our point is on edge of image
+                            continue
+                        else:
+
+                            tb_surroundings.append(float(self.pv_data[pt_v_idx+i, pt_r_idx]))
+                            tb_sur_x_points.append(float(self.v_obs[pt_v_idx+i]-self.v_sys))
+                    else:
+                        raise ValueError("Only 'r' or 'v' are correct values for `get_pix_along` argument.")
                 
                 if return_avg:
-                    tb_sur_pt_rs.append(np.mean(tb_surroundings))
-                else:
-                    tb_sur_pt_rs.append(tb_surroundings)
+                    
+                    if return_interp_mean:   
+              
+                        local_flux_fun = CubicSpline(tb_sur_x_points, tb_surroundings)               
+                        if get_pix_along == 'r':
+                            tb_sur_pt_rs.append(local_flux_fun(self.r_as_rs[idx]))
+                        else:
+                            tb_sur_pt_rs.append(local_flux_fun(self.v_rot_redshifted[idx]))                  
+                    else:
+                        tb_sur_pt_rs.append(np.mean(tb_surroundings))
 
             data_cube = {"Tb_sur_pt_rs": tb_sur_pt_rs, "Tb_sur_pt_bs": tb_sur_pt_bs}
 
-        else:
+        else:       # Getting values on the pixel only
 
             tb_on_point_rs = []
             tb_on_point_bs = []
@@ -270,17 +322,16 @@ class pv_analyze:
             for pt_v_idx, pt_r_idx in zip(self.vidx_bs, self.r_as_bs_idx):
                 tb_on_point_bs.append(float(self.pv_data[pt_v_idx, pt_r_idx]))
 
-        data_cube = {
+            data_cube = {
                     "Tb_on_point_rs": tb_on_point_rs,
                     "Tb_on_point_bs": tb_on_point_bs
                     }
+        
         if return_coords:
             data_cube["r_rs"] = self.r_as_rs
             data_cube["r_bs"] = self.r_as_bs
             data_cube["v_rs"] = self.v_rot_redshifted
             data_cube["v_bs"] = self.v_rot_blueshifted
-                
-
 
         return data_cube
 
