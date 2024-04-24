@@ -471,9 +471,9 @@ class LTEAnalysis():
             tb2 = []
             for j, Tex_i in enumerate(np.linspace(np.min(Texes), np.max(Texes),128)):
                 #print ('N, T: %.2e %.f'%(Ncol_i, Tex_i))
-                tb1.append(self.get_intensity(lines[0], J1, Tex_i, Ncol_i, delv, 
+                tb1.append(self.get_intensity(lines[0], J1, Tex_i, Ncol_i, delv[0], 
                     lineprof=lineprof, mode=mode, Xconv=Xconv[0], Tbg=Tbg, return_tau=False, Tb=Tb))
-                tb2.append(self.get_intensity(lines[1], J2, Tex_i, Ncol_i, delv, 
+                tb2.append(self.get_intensity(lines[1], J2, Tex_i, Ncol_i, delv[1], 
                     lineprof=lineprof, mode=mode, Xconv=Xconv[1], Tbg=Tbg, return_tau=False, Tb=Tb))
 
             ax.plot(tb1, tb2, c='k', lw=lw)#)cm.BrBG(float(i+0.5)/len(Ncols)))
