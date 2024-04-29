@@ -215,7 +215,7 @@ class pv_analyze:
 
         # self.pv.data has a redundant z axis of length one. 
         # Since we are considering that image have only one stokes axis. Let's get rid of that
-        self.pv_data = self.pv.data[0]
+        self.pv_data = np.squeeze(self.pv.data) # Select stokes I
 
         if get_surrounding_pix:
 
