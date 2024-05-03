@@ -243,7 +243,6 @@ class pv_analyze:
                         else:
                             tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
                             tb_sur_x_points.append(float(self.x_axis[pt_r_idx + i]))
-
                     elif get_pix_along == 'v':
                         if pt_v_idx + i < 0 or pt_v_idx + i >= len(self.v_obs):     # takes care of cases when our point is on edge of image
                             continue
@@ -262,9 +261,9 @@ class pv_analyze:
                         local_flux_fun = CubicSpline(tb_sur_x_points, tb_surroundings)
                         
                         if get_pix_along == 'r':
-                            tb_sur_pt_bs.append(local_flux_fun(self.r_as_bs[idx]))
+                            tb_sur_pt_bs.append(local_flux_fun(self.r_as_bs[idx]).item())
                         else:
-                            tb_sur_pt_bs.append(local_flux_fun(self.v_rot_blueshifted[idx]))
+                            tb_sur_pt_bs.append(local_flux_fun(self.v_rot_blueshifted[idx]).item())
                     
                     # just return the mean from pixel values
                     else:
@@ -286,12 +285,10 @@ class pv_analyze:
                         else:
                             tb_surroundings.append(float(self.pv_data[pt_v_idx, pt_r_idx + i]))
                             tb_sur_x_points.append(float(self.x_axis[pt_r_idx + i]))
-
                     elif get_pix_along == 'v':
                         if pt_v_idx + i < 0 or pt_v_idx + i >= len(self.v_obs):     # takes care of cases when our point is on edge of image
                             continue
                         else:
-
                             tb_surroundings.append(float(self.pv_data[pt_v_idx+i, pt_r_idx]))
                             tb_sur_x_points.append(float(self.v_obs[pt_v_idx+i]-self.v_sys))
                     else:
@@ -303,11 +300,14 @@ class pv_analyze:
               
                         local_flux_fun = CubicSpline(tb_sur_x_points, tb_surroundings)               
                         if get_pix_along == 'r':
-                            tb_sur_pt_rs.append(local_flux_fun(self.r_as_rs[idx]))
+                            tb_sur_pt_rs.append(local_flux_fun(self.r_as_rs[idx]).item())
                         else:
-                            tb_sur_pt_rs.append(local_flux_fun(self.v_rot_redshifted[idx]))                  
+                            tb_sur_pt_rs.append(local_flux_fun(self.v_rot_redshifted[idx]).item())                  
                     else:
                         tb_sur_pt_rs.append(np.mean(tb_surroundings))
+                    
+                else:
+                    tb_sur_pt_bs.append(tb_surroundings)
 
             data_cube = {"Tb_sur_pt_rs": tb_sur_pt_rs, "Tb_sur_pt_bs": tb_sur_pt_bs}
 
