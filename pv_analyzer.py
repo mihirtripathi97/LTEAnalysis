@@ -121,12 +121,13 @@ class pv_analyze:
         curve_function      :   `callable` or list, optional, default: None,
                                 A function f(v_rotational) -> r, typically an inverse of kepler velocity function.
                                 It provides angular distance `r` at which one should expect the emission comming from material rotating at
-                                keplerian velocities. More generally, a function that returs r coordinates in units of AU
+                                keplerian velocities. More generally, a function that returns r coordinates in units of AU
                                 wrt center of disk for given velocity channels.
                                 Default - a inverse kepler function GM/(v_rot**2) --> r
 
                                 If mode = 'vals', then a list of lists, specifying r and v values in following order
                                 [r_rs (au)] , [v_rs (kmps)], [r_bs (au)], [v_bs (kmps)]
+
         return_interp_mean  :   `bool`, If true then interpolates (cubic spline) flux values along pixels in specified direction (according to value in 
                                 `get_pix_along`) and returns flux at location of points using the interpolated curve.
         get_surrounding_pix :   `bool`, optional, If True then returns dataframe with Tb values in surrounding `num_pix` pixels
@@ -150,8 +151,10 @@ class pv_analyze:
 
                                 if return_coords = True,
 
-                                - column3 ("r"): numpy.ndarray
-                                - column4 ("v"): numpy.ndarray
+                                - column3 ("r_rs"): numpy.ndarray
+                                - column4 ("r_bs"): numpy.ndarray
+                                - column5 ("v_rs"): numpy.ndarray
+                                - column6 ("v_bs"): numpy.ndarray
 
         """
 
