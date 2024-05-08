@@ -109,7 +109,7 @@ class LTEAnalysis():
         #return line, weight, nlevels, EJ, gJ, J, ntrans, Jup, Acoeff, freq, delE
 
     def get_intensity(self, line, Ju, Tex, Ncol, delv, lineprof='rect', 
-        mode='lte', Xconv=None, Tbg=2.73, Tb=True, return_tau=False):
+        mode='lte', Xconv=None, Tbg=2.73, Tb=True, return_tau=False, return_errs = False):
         '''
         Calculate the intensity or brightness temperature of a molecular line transition.
         Currently only LTE assumption is supported. Non-LTE calculation using RADEX will be 
@@ -167,10 +167,28 @@ class LTEAnalysis():
         Iv = Bv(Tbg,freq_ul)*np.exp(-tau_v) + Bv(Tex, freq_ul)*(1. - np.exp(-tau_v))
         Iv -= Bv(Tbg,freq_ul)
 
+        if return_errs:
+
+            dIv_dN = (-Bv(Tbg,freq_ul) + Bv(Tex, freq_ul))*np.exp(-tau_v)*tau_v/Ncol
+
+            dIv_dT = (tau_v*np.exp(hp*freq_ul/(kb*Tex))*np.exp(-tau_v)/(np.exp(hp*freq_ul/(kb*Tex)) - 1.))*(-Bv(Tbg,freq_ul) + Bv(Tex, freq_ul)) \
+                      + (Bv(Tex, freq_ul) * (hp*freq_ul/(kb*Tex**3))*(1.- np.exp(-tau_v))/(np.exp(hp*freq_ul/(kb*Tex)) - 1.))
+
+
         # print("In get intensity: ", Iv)
         if Tb:
-            # equivalent brightness temperature
-            return (clight*clight/(2.*freq_ul*freq_ul*kb))*Iv
+
+            if not return_errs:
+                # equivalent brightness temperature
+                Iv_tb = (clight*clight/(2.*freq_ul*freq_ul*kb))*Iv
+                return Iv_tb
+            else:
+                Iv_tb = (clight*clight/(2.*freq_ul*freq_ul*kb))*Iv
+                dIv_dN = (clight*clight/(2.*freq_ul*freq_ul*kb))*dIv_dN
+                dIv_dT = (clight*clight/(2.*freq_ul*freq_ul*kb))*dIv_dT
+
+                return Iv_tb, dIv_dN, dIv_dT
+
         else:
             return Iv
 
