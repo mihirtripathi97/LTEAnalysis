@@ -11,6 +11,7 @@ from lteanalysis import LTEAnalysis
 # ----- input -----
 # for LTE calculation
 line  = 'c18o'
+#line  = '13co'
 Xconv = 1e-7
 delv  = 0.5e5 # cm/s
 ilines = [3, 2] # Ju
