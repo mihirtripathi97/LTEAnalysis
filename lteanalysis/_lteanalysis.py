@@ -31,7 +31,6 @@ hp     = constants.h.cgs.value        # Planck constant
 sigsb  = constants.sigma_sb.cgs.value # Stefan-Boltzmann constant (erg s^-1 cm^-2 K^-4)
 mp     = constants.m_p.cgs.value      # Proton mass (g)
 
-
 # path to here
 path_to_here = os.path.dirname(__file__)
 path_to_library = path_to_here[:-11]
@@ -73,7 +72,8 @@ class LTEAnalysis():
         elevels = np.array([ elevels[i][0].split() for i in range(nlevels)])
         lev, EJ, gJ, J = elevels.T
         lev = np.array([ int(lev[i]) for i in range(nlevels)])
-        EJ  = np.array([ float(EJ[i]) for i in range(nlevels)])
+        EJ  = np.array([ float(EJ[i]) for i in range(nlevels)]) \
+        * clight * hp / kb # in K
         gJ  = np.array([ float(gJ[i]) for i in range(nlevels)])
         J   = np.array([ int(J[i]) for i in range(nlevels)])
 
@@ -85,13 +85,15 @@ class LTEAnalysis():
         vtrans = data[3+nlevels+1:3+nlevels+1+ntrans].values
         vtrans = np.array([vtrans[i][0].split() for i in range(ntrans)])
 
-        itrans, Jup, Jlow, Acoeff, freq, delE = vtrans.T
+        itrans, Jup, Jlow, Acoeff, freq, Eu = vtrans.T
         itrans = np.array([ int(itrans[i]) for i in range(ntrans)])
         Jup    = np.array([ int(Jup[i]) for i in range(ntrans)])
         Jlow   = np.array([ int(Jlow[i]) for i in range(ntrans)])
         Acoeff = np.array([ float(Acoeff[i]) for i in range(ntrans)])
         freq   = np.array([ float(freq[i]) for i in range(ntrans)])
-        delE   = np.array([ float(delE[i]) for i in range(ntrans)])
+        Eu   = np.array([ float(Eu[i]) for i in range(ntrans)])
+        #for i in range(ntrans):
+        #    print('Eu, Eu: %.4f %.4f'%(EJ[i+1], delE[i]))
 
         self.moldata[line] = {
         'weight':weight,
@@ -104,12 +106,12 @@ class LTEAnalysis():
         'Jlow': Jlow,
         'Acoeff': Acoeff,
         'freq': freq,
-        'delE': delE,
+        'Eu': Eu,
         }
 
         #return line, weight, nlevels, EJ, gJ, J, ntrans, Jup, Acoeff, freq, delE
 
-    def get_intensity(self, line, Ju, Tex, Ncol, delv, lineprof='rect', 
+    def get_intensity(self, line, Ju, Tex, Ncol, delv, lineprof='gauss', 
         mode='lte', Xconv=None, Tbg=2.73, Tb=True, return_tau=False):
         '''
         Calculate the intensity or brightness temperature of a molecular line transition.
@@ -140,31 +142,37 @@ class LTEAnalysis():
             self.read_lamda_moldata(line)
 
         # line Ju --> Jl
-        freq_ul = self.moldata[line]['freq'][Ju-1]*1e9 # Hz
+        freq_ul = self.moldata[line]['freq'][Ju-1] * 1e9 # Hz
         Aul     = self.moldata[line]['Acoeff'][Ju-1]
         gu      = self.moldata[line]['gJ'][Ju]
         gl      = self.moldata[line]['gJ'][Ju-1]
-        EJu     = self.moldata[line]['EJ'][Ju]
+        Eu     = self.moldata[line]['EJ'][Ju]
+        El     = self.moldata[line]['EJ'][Ju-1]
+        #EJu     = self.moldata[line]['Eu'][Ju - 1]
+        #print(Ju, EJu)
 
         # partition function
         Qrot = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'], 
             self.moldata[line]['J'], Tex)
 
         # N_H2 --> N_mol
-        if Xconv: Ncol *= Xconv
+        if Xconv is not None: Ncol *= Xconv
 
         # tau_v
+        _delv = delv if lineprof == 'rect' else delv * 0.5 * np.sqrt(np.pi / np.log(2.))
         tau_v = (clight*clight*clight)/(8.*np.pi*freq_ul*freq_ul*freq_ul)*(gu/Qrot)\
-        *np.exp(-EJu/Tex)*Ncol*Aul*(np.exp(hp*freq_ul/(kb*Tex)) - 1.)/delv
-        print('tau = %.2e'%tau_v)
+        *np.exp(-Eu/Tex)*Ncol*Aul*(np.exp(hp*freq_ul/(kb*Tex)) - 1.)/_delv
+        #print('tau = %.2e'%tau_v)
 
         if return_tau:
             return tau_v
-        Iv = Bv(Tbg,freq_ul)*np.exp(-tau_v) + Bv(Tex, freq_ul)*(1. - np.exp(-tau_v))
-        Iv -= Bv(Tbg,freq_ul)
+        #Iv = Bv(Tbg,freq_ul)*np.exp(-tau_v) + Bv(Tex, freq_ul)*(1. - np.exp(-tau_v))
+        #Iv -= Bv(Tbg,freq_ul)
+        Iv = (Bv(Tex, freq_ul) - Bv(Tbg,freq_ul)) * (1. - np.exp(-tau_v))
 
         if Tb:
             # equivalent brightness temperature
+            #return (Tex - Tbg) * (1. - np.exp(-tau_v))
             return (clight*clight/(2.*freq_ul*freq_ul*kb))*Iv
         else:
             return Iv
@@ -488,8 +496,7 @@ def Pfunc(EJ, gJ, J, Tex):
         Z: partition function
     '''
     Zarray = np.array([gJ[j]*np.exp(-EJ[j]/Tex) for j in range(len(J))])
-    Z      = np.sum(Zarray)
-    return Z
+    return np.sum(Zarray)
 
 
 # planck function
@@ -501,10 +508,9 @@ def Bv(T,v):
         T: temprature [K]
         v: frequency [Hz]
     '''
-    exp   = np.exp((hp*v)/(kb*T))-1.0
-    fterm = (2.0*hp*v*v*v)/(clight*clight)
-    Bv    = fterm/exp
-    return Bv
+    exp   = np.exp((hp*v)/(kb*T)) - 1.0
+    fterm = (2.0 * hp * v * v * v)/(clight * clight)
+    return fterm / exp
 
 
 
