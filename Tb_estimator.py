@@ -11,8 +11,8 @@ def log_likelihood(params, Y1, Y2, s1, s2, model):
     N = 10**lg_N     # We convert lg_N back to N
 
     # Y1 --> Tb(3-2), Y2 --> Tb(2-1)
-    Y1_predicted = model.get_intensity(line = 'c18o', Ju = 3, Ncol = N, Tex = T, delv = 7417.8, Xconv = 1.e-7)
-    Y2_predicted = model.get_intensity(line = 'c18o', Ju = 2, Ncol = N, Tex = T, delv = 7417.8, Xconv = 1.e-7)
+    Y1_predicted = model.get_intensity(line = 'c18o', Ju = 3, Ncol = N, Tex = T, delv = 0.5, Xconv = 1.e-7)
+    Y2_predicted = model.get_intensity(line = 'c18o', Ju = 2, Ncol = N, Tex = T, delv = 0.5, Xconv = 1.e-7)
 
     # Compute the log likelihood using normal distributions
     log_likelihood_Y1 = -0.5 * (np.log(2 * np.pi * s1**2) + (Y1 - Y1_predicted)**2 / s1**2)
