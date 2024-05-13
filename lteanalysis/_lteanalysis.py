@@ -26,18 +26,16 @@ rs = constants.R_sun.cgs.value    # Solar radius (cm)
 au = units.au.to('cm')            # 1 au (cm)
 pc = units.pc.to('cm')            # 1 pc (cm)
 clight = constants.c.cgs.value        # light speed (cm s^-1)
-kb = constants.k_B.cgs.value      # Boltzman coefficient
-hp = constants.h.cgs.value        # Planck constant
-# Stefan-Boltzmann constant (erg s^-1 cm^-2 K^-4)
-sigsb = constants.sigma_sb.cgs.value
-mp = constants.m_p.cgs.value      # Proton mass (g)
-
+kb     = constants.k_B.cgs.value      # Boltzman coefficient
+hp     = constants.h.cgs.value        # Planck constant
+sigsb  = constants.sigma_sb.cgs.value # Stefan-Boltzmann constant (erg s^-1 cm^-2 K^-4)
+mp     = constants.m_p.cgs.value      # Proton mass (g)
 
 # path to here
 path_to_here = os.path.dirname(__file__)
 path_to_library = path_to_here[:-11]
-# print (path_to_here)
-# print (path_to_library)
+#print (path_to_here)
+#print (path_to_library)
 
 
 class LTEAnalysis():
@@ -74,10 +72,11 @@ class LTEAnalysis():
         elevels = data[3:3+nlevels].values
         elevels = np.array([elevels[i][0].split() for i in range(nlevels)])
         lev, EJ, gJ, J = elevels.T
-        lev = np.array([int(lev[i]) for i in range(nlevels)])
-        EJ = np.array([float(EJ[i]) for i in range(nlevels)])
-        gJ = np.array([float(gJ[i]) for i in range(nlevels)])
-        J = np.array([int(J[i]) for i in range(nlevels)])
+        lev = np.array([ int(lev[i]) for i in range(nlevels)])
+        EJ  = np.array([ float(EJ[i]) for i in range(nlevels)]) \
+        * clight * hp / kb # in K
+        gJ  = np.array([ float(gJ[i]) for i in range(nlevels)])
+        J   = np.array([ int(J[i]) for i in range(nlevels)])
 
         # number of transition
         # Find number of radiative transitions listed in the file
@@ -88,31 +87,33 @@ class LTEAnalysis():
         vtrans = data[3+nlevels+1:3+nlevels+1+ntrans].values
         vtrans = np.array([vtrans[i][0].split() for i in range(ntrans)])
 
-        itrans, Jup, Jlow, Acoeff, freq, delE = vtrans.T
-        itrans = np.array([int(itrans[i]) for i in range(ntrans)])
-        Jup = np.array([int(Jup[i]) for i in range(ntrans)])
-        Jlow = np.array([int(Jlow[i]) for i in range(ntrans)])
-        Acoeff = np.array([float(Acoeff[i]) for i in range(ntrans)])
-        freq = np.array([float(freq[i]) for i in range(ntrans)])
-        delE = np.array([float(delE[i]) for i in range(ntrans)])
+        itrans, Jup, Jlow, Acoeff, freq, Eu = vtrans.T
+        itrans = np.array([ int(itrans[i]) for i in range(ntrans)])
+        Jup    = np.array([ int(Jup[i]) for i in range(ntrans)])
+        Jlow   = np.array([ int(Jlow[i]) for i in range(ntrans)])
+        Acoeff = np.array([ float(Acoeff[i]) for i in range(ntrans)])
+        freq   = np.array([ float(freq[i]) for i in range(ntrans)])
+        Eu   = np.array([ float(Eu[i]) for i in range(ntrans)])
+        #for i in range(ntrans):
+        #    print('Eu, Eu: %.4f %.4f'%(EJ[i+1], delE[i]))
 
         self.moldata[line] = {
-            'weight': weight,
-            'nlevels': nlevels,
-            'EJ': EJ,
-            'gJ': gJ,
-            'J': J,
-            'ntrans': ntrans,
-            'Jup': Jup,
-            'Jlow': Jlow,
-            'Acoeff': Acoeff,
-            'freq': freq,
-            'delE': delE,
+        'weight':weight,
+        'nlevels': nlevels,
+        'EJ': EJ,
+        'gJ': gJ,
+        'J': J,
+        'ntrans': ntrans,
+        'Jup': Jup,
+        'Jlow': Jlow,
+        'Acoeff': Acoeff,
+        'freq': freq,
+        'Eu': Eu,
         }
 
         # return line, weight, nlevels, EJ, gJ, J, ntrans, Jup, Acoeff, freq, delE
 
-    def get_intensity(self, line, Ju, Tex, Ncol, delv, lineprof='rect',
+    def get_intensity(self, line, Ju, Tex, Ncol, delv, lineprof='gauss',
                       mode='lte', Xconv=None, Tbg=2.73, Tb=True, return_tau=False, return_errs=False):
         '''
         Calculate the intensity or brightness temperature of a molecular line transition.
@@ -143,11 +144,14 @@ class LTEAnalysis():
             self.read_lamda_moldata(line)
 
         # line Ju --> Jl
-        freq_ul = self.moldata[line]['freq'][Ju-1]*1e9  # Hz
-        Aul = self.moldata[line]['Acoeff'][Ju-1]
-        gu = self.moldata[line]['gJ'][Ju]
-        gl = self.moldata[line]['gJ'][Ju-1]
-        EJu = self.moldata[line]['EJ'][Ju]
+        freq_ul = self.moldata[line]['freq'][Ju-1] * 1e9 # Hz
+        Aul     = self.moldata[line]['Acoeff'][Ju-1]
+        gu      = self.moldata[line]['gJ'][Ju]
+        gl      = self.moldata[line]['gJ'][Ju-1]
+        Eu     = self.moldata[line]['EJ'][Ju]
+        El     = self.moldata[line]['EJ'][Ju-1]
+        #EJu     = self.moldata[line]['Eu'][Ju - 1]
+        #print(Ju, EJu)
 
         # partition function
         try:
@@ -159,21 +163,19 @@ class LTEAnalysis():
             print(f"Line {line}, Ju = {Ju}, Texe = {Tex}, Ncol = {Ncol : .2e}")
 
         # N_H2 --> N_mol
-        if Xconv:
-            Ncol *= Xconv
+        if Xconv is not None: Ncol *= Xconv
 
         # tau_v
-        tau_v = (clight*clight*clight)/(8.*np.pi*freq_ul*freq_ul*freq_ul) * \
-            (gu/Qrot)*np.exp(-EJu/Tex)*Ncol*Aul * \
-            (np.exp(hp*freq_ul/(kb*Tex)) - 1.)/delv
-        # print('tau = %.2e'%tau_v)
+        _delv = delv if lineprof == 'rect' else delv * 0.5 * np.sqrt(np.pi / np.log(2.))
+        tau_v = (clight*clight*clight)/(8.*np.pi*freq_ul*freq_ul*freq_ul)*(gu/Qrot)\
+        *np.exp(-Eu/Tex)*Ncol*Aul*(np.exp(hp*freq_ul/(kb*Tex)) - 1.)/_delv
+        #print('tau = %.2e'%tau_v)
 
         if return_tau:
             return tau_v
-
-        Iv = Bv(Tbg, freq_ul)*np.exp(-tau_v) + \
-            Bv(Tex, freq_ul)*(1. - np.exp(-tau_v))
-        Iv -= Bv(Tbg, freq_ul)
+        #Iv = Bv(Tbg,freq_ul)*np.exp(-tau_v) + Bv(Tex, freq_ul)*(1. - np.exp(-tau_v))
+        #Iv -= Bv(Tbg,freq_ul)
+        Iv = (Bv(Tex, freq_ul) - Bv(Tbg,freq_ul)) * (1. - np.exp(-tau_v))
 
         if return_errs:
 
@@ -529,8 +531,7 @@ def Pfunc(EJ, gJ, J, Tex):
         Z: partition function
     '''
     Zarray = np.array([gJ[j]*np.exp(-EJ[j]/Tex) for j in range(len(J))])
-    Z = np.sum(Zarray)
-    return Z
+    return np.sum(Zarray)
 
 
 # planck function
@@ -542,10 +543,9 @@ def Bv(T, v):
         T: temprature [K]
         v: frequency [Hz]
     '''
-    exp = np.exp((hp*v)/(kb*T))-1.0
-    fterm = (2.0*hp*v*v*v)/(clight*clight)
-    Bv = fterm/exp
-    return Bv
+    exp   = np.exp((hp*v)/(kb*T)) - 1.0
+    fterm = (2.0 * hp * v * v * v)/(clight * clight)
+    return fterm / exp
 
 
 def change_aspect_ratio(ax, ratio, plottype='linear'):
