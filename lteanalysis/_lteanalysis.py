@@ -155,8 +155,8 @@ class LTEAnalysis():
 
         # partition function
         try:
-            Qrot = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'],
-                         self.moldata[line]['J'], Tex)
+            Qrot, dQ_dT = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'],
+                         self.moldata[line]['J'], Tex, return_derivative=True)
         except RuntimeWarning as e:
             print("Error in getting partition function")
             print(e)
@@ -167,6 +167,7 @@ class LTEAnalysis():
 
         # tau_v
         _delv = delv if lineprof == 'rect' else delv * 0.5 * np.sqrt(np.pi / np.log(2.))
+        
         tau_v = (clight*clight*clight)/(8.*np.pi*freq_ul*freq_ul*freq_ul)*(gu/Qrot)\
         *np.exp(-Eu/Tex)*Ncol*Aul*(np.exp(hp*freq_ul/(kb*Tex)) - 1.)/_delv
         #print('tau = %.2e'%tau_v)
@@ -179,12 +180,16 @@ class LTEAnalysis():
 
         if return_errs:
 
-            dIv_dN = (-Bv(Tbg, freq_ul) + Bv(Tex, freq_ul)) * \
-                np.exp(-tau_v)*tau_v/Ncol
+            dtau_v_dN = tau_v/Ncol
 
-            dIv_dT = (-Bv(Tbg, freq_ul) + Bv(Tex, freq_ul))*(np.exp(-tau_v)*np.exp(hp*freq_ul/(kb*Tex))*tau_v*EJu*hp*freq_ul /
-                                                             (kb*Tex**4)) - ((1. - np.exp(-tau_v))*hp*freq_ul*Bv(Tex, freq_ul)/(kb*(Tex**2)*(np.exp(hp*freq_ul/kb*Tex) - 1.)))
+            dtau_v_dT = (hp*freq_ul*tau_v*dQ_dT*Eu/(kb*Qrot*(Tex**4)))*(np.exp(hp*freq_ul/(kb*Tex))/(np.exp(hp*freq_ul/(kb*Tex)) - 1.0))
+            
+            print("dtauv_dT = ",dtau_v_dT)
 
+            dIv_dN = (-Bv(Tbg, freq_ul) + Bv(Tex, freq_ul)) * np.exp(-tau_v)*dtau_v_dN
+
+            dIv_dT = (-Bv(Tbg, freq_ul) + Bv(Tex, freq_ul))*(np.exp(-tau_v)*dtau_v_dT) + \
+                        (((1.-np.exp(-tau_v))*hp*freq_ul*np.exp(hp*freq_ul/(kb*Tex))*Bv(Tex, freq_ul))/(kb*(Tex**2)*(np.exp(hp*freq_ul/(kb*Tex))-1.0)))
         # print("In get intensity: ", Iv)
         if Tb:
 
@@ -517,7 +522,7 @@ class LTEAnalysis():
 # partition function
 
 
-def Pfunc(EJ, gJ, J, Tex):
+def Pfunc(EJ, gJ, J, Tex, return_derivative = False):
     '''
     Calculate the partition function.
 
@@ -526,12 +531,19 @@ def Pfunc(EJ, gJ, J, Tex):
         gJ: statistical weight
         J: energy level
         Tk: kinetic energy
+        return_derivative: If True, then returns derivative wrt "T" as well.
 
     Return:
-        Z: partition function
+        Z, dZ_dT: partition function, and its derivative if return_derivative is True
+        
     '''
     Zarray = np.array([gJ[j]*np.exp(-EJ[j]/Tex) for j in range(len(J))])
-    return np.sum(Zarray)
+
+    if return_derivative:
+        dZ_dT_array = np.array([gJ[j]*np.exp(-EJ[j]/Tex)*EJ[j] for j in range(len(J))])*(1/(Tex**2.))
+        return np.sum(Zarray), np.sum(dZ_dT_array)
+    else:
+        return np.sum(Zarray)
 
 
 # planck function
