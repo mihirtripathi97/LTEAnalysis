@@ -182,8 +182,9 @@ class LTEAnalysis():
 
             dtau_v_dN = tau_v/Ncol
 
-            dtau_v_dT = (hp*freq_ul*tau_v*dQ_dT*Eu/(kb*Qrot*(Tex**4)))*(np.exp(hp*freq_ul/(kb*Tex))/(np.exp(hp*freq_ul/(kb*Tex)) - 1.0))
-            
+            #dtau_v_dT = (hp*freq_ul*tau_v*dQ_dT*Eu/(kb*Qrot*(Tex**4)))*(np.exp(hp*freq_ul/(kb*Tex))/(np.exp(hp*freq_ul/(kb*Tex)) - 1.0))
+            dtau_v_dT = (hp*freq_ul*tau_v*dQ_dT*Eu/(kb*Qrot*(Tex**4)))/(np.exp(hp*freq_ul/(kb*Tex)) - 1.0)
+
             print("dtauv_dT = ",dtau_v_dT)
 
             dIv_dN = (-Bv(Tbg, freq_ul) + Bv(Tex, freq_ul)) * np.exp(-tau_v)*dtau_v_dN
