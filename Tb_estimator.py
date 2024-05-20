@@ -4,19 +4,48 @@ import matplotlib.pyplot as plt
 import os
 from scipy.optimize import minimize
 from scipy.optimize import Bounds
+from typing import List
 
-def log_likelihood(params, Y1, Y2, s1, s2, model):
+def log_likelihood(params:List[float], Y1:float, Y2:float, s1:float, s2:float, 
+                   model, like_func:str = 'chisq')->float:
+
+    """
+    Computes log likelihood of brightness temperatures of C18O J = 3-2 and J = 2-1 line emission.
+
+    Parameters:
+    -----------
+    params      : `Iterable`, List of two floats, parameter values (log10Ncol, Texe) 
+    Y1          : `float`, Tb from J = 3-2 emission
+    Y2          : `float`, Tb from J = 2-1 emission
+    s1          : `float`, Sigma (measurment error) for Tb (J = 3-2)
+    s2          : `float`, Sigma (measurment error) for Tb (J = 2-1)
+    model       : `class: LTEanalysis` object. Model for LTE analysis
+    like_funct  : `str`, default: 'chisq', Log Likelihood function for use, 
+                    `chisq` - log10(Chi-square) 
+                    `lg_cosh' - log10(cosh((y_pred - y_truth)/sigma_pred))
+
+    """
     
     lg_N, T = params
     N = 10**lg_N     # We convert lg_N back to N
 
     # Y1 --> Tb(3-2), Y2 --> Tb(2-1)
-    Y1_predicted = model.get_intensity(line = 'c18o', Ju = 3, Ncol = N, Tex = T, delv = 7417.8, Xconv = 1.e-7)
-    Y2_predicted = model.get_intensity(line = 'c18o', Ju = 2, Ncol = N, Tex = T, delv = 7417.8, Xconv = 1.e-7)
+    Y1_predicted = model.get_intensity(line = 'c18o', Ju = 3, Ncol = N, Tex = T, 
+                                       delv = 7417.8, Xconv = 1.e-7)
+    Y2_predicted = model.get_intensity(line = 'c18o', Ju = 2, Ncol = N, Tex = T, 
+                                       delv = 7417.8, Xconv = 1.e-7)
 
-    # Compute the log likelihood using normal distributions
-    log_likelihood_Y1 = -0.5 * (np.log(2 * np.pi * s1**2) + (Y1 - Y1_predicted)**2 / s1**2)
-    log_likelihood_Y2 = -0.5 * (np.log(2 * np.pi * s2**2) + (Y2 - Y2_predicted)**2 / s2**2)
+    if like_func.lower() == "chisq":
+        # Compute the log likelihood using normal distributions
+        log_likelihood_Y1 = -0.5 * (np.log(2 * np.pi * s1**2) + (Y1 - Y1_predicted)**2 / s1**2)
+        log_likelihood_Y2 = -0.5 * (np.log(2 * np.pi * s2**2) + (Y2 - Y2_predicted)**2 / s2**2)
+    
+    elif like_func.lower() == "lg_cosh":
+        log_likelihood_Y1 = -0.5* np.log10(np.cosh((Y1 - Y1_predicted)/np.abs(s1))) 
+        log_likelihood_Y2 = -0.5* np.log10(np.cosh((Y2 - Y2_predicted)/np.abs(s2)))
+    
+    else:
+        raise ValueError("Please specify correct log likelihood function")
     
     lg_l = log_likelihood_Y1 + log_likelihood_Y2
     return lg_l
@@ -31,11 +60,11 @@ def log_prior(params, bounds):
     return -np.inf
 
 # Define the log posterior function
-def log_posterior(params, Y1, Y2, s1, s2, bounds, model):
+def log_posterior(params, Y1, Y2, s1, s2, bounds, model, like_func):
     log_prior_value = log_prior(params, bounds)
     if np.isinf(log_prior_value):
         return log_prior_value
-    return log_prior_value + log_likelihood(params, Y1, Y2, s1, s2, model)
+    return log_prior_value + log_likelihood(params, Y1, Y2, s1, s2, model, like_func)
 
 
 
