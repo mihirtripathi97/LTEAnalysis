@@ -68,7 +68,8 @@ def log_posterior(params, Y1, Y2, s1, s2, bounds, model, like_func):
 
 
 
-def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc', 'scipy', 'both'},
+def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc', 'scipy', 'both'}, 
+                    like_function:str = 'chisq',
                     initial_params:list = None, bounds:list = None, args:dict = None, initial_scatter:float = 0.1,
                     nwalkers:int = 100, n_steps:int = 1000, burn_in:int = 100, thin_by:int = 15, 
                     return_flat:bool = False, intensity_model = None, plot_chain:bool=True, 
@@ -92,8 +93,6 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
         # NOTE - Work in progress
         
 
-
-
     if estimator == 'mcmc':
 
         # Check if both temperature values are float
@@ -104,7 +103,7 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
 
             p0 = np.array(initial_params, dtype=float) + initial_scatter * np.random.randn(nwalkers, ndim)
 
-            args = (t1, t2, s1, s2, bounds, intensity_model)
+            args = (t1, t2, s1, s2, bounds, intensity_model, like_function)
 
             sampler = em.EnsembleSampler(nwalkers, ndim, log_posterior, args=args)
             
