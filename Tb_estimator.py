@@ -31,9 +31,9 @@ def log_likelihood(params:List[float], Y1:float, Y2:float, s1:float, s2:float,
 
     # Y1 --> Tb(3-2), Y2 --> Tb(2-1)
     Y1_predicted = model.get_intensity(line = 'c18o', Ju = 3, Ncol = N, Tex = T, 
-                                       delv = 7417.8, Xconv = 1.e-7)
+                                       delv = 7417.8, Xconv = None)
     Y2_predicted = model.get_intensity(line = 'c18o', Ju = 2, Ncol = N, Tex = T, 
-                                       delv = 7417.8, Xconv = 1.e-7)
+                                       delv = 7417.8, Xconv = None)
 
     if like_func.lower() == "chisq":
         # Compute the log likelihood using normal distributions
