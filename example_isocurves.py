@@ -9,9 +9,9 @@ from lteanalysis import LTEAnalysis
 # for LTE calculation
 line  = 'c18o'
 Xconv = 1e-7
-delv  = 0.5e5 # cm/s
+delv  = 0.07e5 # cm/s
 ilines = [3,2] # Ju
-Ncols = np.array([5.e10, 5.e15, 1.e16, 1.e17]) # cm^-2
+Ncols = np.array([5.e13, 5e14, 5.e15, 9.e15, 5e16, 1.e17]) # cm^-2
 Texes = np.array([5., 10., 15., 20., 25., 30., 40.]) # K
 # Example of data
 data = [6., 6.,] # Tb3-2, Tb2-1
