@@ -113,7 +113,8 @@ class pv_analyze:
         cf_kwargs = None,
         ) -> dict[np.ndarray, np.ndarray]:
         """
-        Returns a pandas dataframe where each column is a temperature at pixels on/surrounding the curve points in each velocity channel
+        Returns a pandas dataframe where each column is a temperature at pixels on/surrounding 
+        the curve points in each velocity channel
 
         Parameters:
         -----------
