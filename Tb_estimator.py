@@ -6,8 +6,9 @@ from scipy.optimize import minimize
 from scipy.optimize import Bounds
 from typing import List
 
-def log_likelihood(params:List[float], Y1:float, Y2:float, s1:float, s2:float, 
-                   model, like_func:str = 'chisq')->float:
+def log_likelihood(params:List[float]=[14,19], Y1:float=10, Y2:float=9., 
+                   s1:float=1, s2:float=0.5, sf1:float=0.01, sf2:float=0.01,
+                   model=None, like_func:str = 'chisq')->float:
 
     """
     Computes log likelihood of brightness temperatures of C18O J = 3-2 and J = 2-1 line emission.
@@ -19,6 +20,8 @@ def log_likelihood(params:List[float], Y1:float, Y2:float, s1:float, s2:float,
     Y2          : `float`, Tb from J = 2-1 emission
     s1          : `float`, Sigma (measurment error) for Tb (J = 3-2)
     s2          : `float`, Sigma (measurment error) for Tb (J = 2-1)
+    sf1         : `float`, scaling factor for Y1
+    sf2         : `float`, scaling factor for Y2
     model       : `class: LTEanalysis` object. Model for LTE analysis
     like_funct  : `str`, default: 'chisq', Log Likelihood function for use, 
                     `chisq` - log10(Chi-square) 
@@ -37,12 +40,12 @@ def log_likelihood(params:List[float], Y1:float, Y2:float, s1:float, s2:float,
 
     if like_func.lower() == "chisq":
         # Compute the log likelihood using normal distributions
-        log_likelihood_Y1 = -0.5 * (np.log(2 * np.pi * s1**2) + (Y1 - Y1_predicted)**2 / s1**2)
-        log_likelihood_Y2 = -0.5 * (np.log(2 * np.pi * s2**2) + (Y2 - Y2_predicted)**2 / s2**2)
+        log_likelihood_Y1 = -0.5 * (np.log(2 * np.pi * s1**2) + (sf1*Y1 - Y1_predicted)**2 / s1**2)
+        log_likelihood_Y2 = -0.5 * (np.log(2 * np.pi * s2**2) + (sf2*Y2 - Y2_predicted)**2 / s2**2)
     
     elif like_func.lower() == "lg_cosh":
-        log_likelihood_Y1 = -0.5* np.log10(np.cosh((Y1 - Y1_predicted)/np.abs(s1))) 
-        log_likelihood_Y2 = -0.5* np.log10(np.cosh((Y2 - Y2_predicted)/np.abs(s2)))
+        log_likelihood_Y1 = -0.5* np.log10(np.cosh((sf1*Y1 - Y1_predicted)/np.abs(s1))) 
+        log_likelihood_Y2 = -0.5* np.log10(np.cosh((sf2*Y2 - Y2_predicted)/np.abs(s2)))
     
     else:
         raise ValueError("Please specify correct log likelihood function")
@@ -60,11 +63,11 @@ def log_prior(params, bounds):
     return -np.inf
 
 # Define the log posterior function
-def log_posterior(params, Y1, Y2, s1, s2, bounds, model, like_func):
+def log_posterior(params, Y1, Y2, s1, s2, sf1, sf2, bounds, model, like_func):
     log_prior_value = log_prior(params, bounds)
     if np.isinf(log_prior_value):
         return log_prior_value
-    return log_prior_value + log_likelihood(params, Y1, Y2, s1, s2, model, like_func)
+    return log_prior_value + log_likelihood(params, Y1, Y2, s1, s2, sf1, sf2, model, like_func)
 
 
 
@@ -103,11 +106,30 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
 
             p0 = np.array(initial_params, dtype=float) + initial_scatter * np.random.randn(nwalkers, ndim)
 
-            args = (t1, t2, s1, s2, bounds, intensity_model, like_function)
+            np.random.seed(141297)
 
+            scale_factor_1 = np.random.normal(loc=1, scale=0.06, size=n_steps)
+            scale_factor_2 = np.random.normal(loc=1, scale=0.06, size=n_steps)
+
+            args = (t1, t2, s1, s2, scale_factor_1[0], scale_factor_2[0], bounds,
+                    intensity_model, like_function)
             sampler = em.EnsembleSampler(nwalkers, ndim, log_posterior, args=args)
-            
-            sampler.run_mcmc(p0, n_steps, progress=True)
+
+
+            # Placeholder for the samples
+            samples = []
+
+            # Custom MCMC loop
+            for i in range(n_steps):
+                
+                sampler.args = (t1, t2, s1, s2, scale_factor_1[i], scale_factor_2[i], bounds,
+                                intensity_model, like_function)
+                sampler.run_mcmc(p0, 1)  # Run one step at a time
+                p0 = sampler.get_last_sample().coords  # Get the last positions of the walkers
+                samples.append(sampler.get_chain()[-1])  # Append the latest samples
+
+            samples = np.array(samples).reshape(-1, ndim)
+
 
             # Extract samples
 
@@ -121,7 +143,8 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
                 for i in range(nwalkers):
                     for j in range(n_steps):
                         params = samples[j, i]
-                        log_likelihood_values[i, j] = log_likelihood(params, t1, t2, s1, s2, intensity_model)
+                        log_likelihood_values[i, j] = log_likelihood(params, t1, t2, s1, s2, scale_factor_1[j], 
+                                                                     scale_factor_2[j], intensity_model)
 
                 fig, axes = plt.subplots(3, figsize=(10, 7), sharex=True)
                 labels = ["lg_N", "T"]
