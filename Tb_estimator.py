@@ -108,8 +108,8 @@ def estimate_params(t1:float, t2:float, s1:float, s2:float, estimator:str={'mcmc
 
             np.random.seed(141297)
 
-            scale_factor_1 = np.random.normal(loc=1, scale=0.06, size=n_steps)
-            scale_factor_2 = np.random.normal(loc=1, scale=0.06, size=n_steps)
+            scale_factor_1 = np.random.normal(loc=1, scale=0.1, size=n_steps)
+            scale_factor_2 = np.random.normal(loc=1, scale=0.1, size=n_steps)
 
             args = (t1, t2, s1, s2, scale_factor_1[0], scale_factor_2[0], bounds,
                     intensity_model, like_function)
