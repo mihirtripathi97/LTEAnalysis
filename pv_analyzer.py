@@ -339,20 +339,35 @@ class pv_analyze:
 
         return data_cube
 
-    def plot_pv(self, plot_curve: bool = False, **kwargs):
+    def plot_pv(self, plot_curve: bool = False, base_ctr_lvl = None,
+                cmap=None, cbarlim=None, **kwargs):
         """
         Plots PV diagram and overplots curve points if `plot_curve` is True. Returns the fig, axes object.
         """
         # Work in progress
+
+        if base_ctr_lvl is not None:
+            self.rms = base_ctr_lvl
+
+        if cmap is None:
+            cmap = 'inferno'
+        
+        if cbarlim is None:
+            vmin = 0
+            vmax = np.max(self.pv_data)
+        
+        else:
+            vmin = cbarlim[0]
+            vmax = cbarlim[1]
 
         canvas = AstroCanvas((1, 1))
         pv_plot = canvas.pvdiagram(
             self.pv,
             vrel=True,
             color=True,
-            cmap="inferno",
-            vmin=-2.0,
-            vmax=14.0,
+            cmap=cmap,
+            vmin=vmin,
+            vmax=vmax,
             contour=True,
             clip=0.0000000,
             ylim=[-8.5, 6.5],
@@ -360,12 +375,13 @@ class pv_analyze:
             # If true, offset (radial distance from star) will be the x axis
             x_offset=True,
             vsys=self.v_sys,  # systemic velocity
+            ccolor='grey',
             # plot vertical center (systemic velocity)
             ln_var=True,
             # plot horizontal center (zero offset)
             ln_hor=True,
             cbaroptions=("right", "3%", "3%"),
-            cbarlabel=r"(Jy beam$^{-1})$",
+            cbarlabel=r"Jy (beam$^{-1}$)",
             colorbar=True,
         )
 
