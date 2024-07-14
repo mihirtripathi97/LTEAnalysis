@@ -12,6 +12,7 @@ current_path = os.getcwd()
 # Office computer
 if current_path.split(sep=":")[0].lower() == "d":
     sys.path.append("D:\L1489_IRS_ssp\imfits")
+    print("importing imfits from D:\L1489_IRS_ssp\imfits")
     from imfits.drawmaps import AstroCanvas
     from imfits import Imfits
 else:  # Laptop N
@@ -31,10 +32,12 @@ class pv_analyze:
 
     def __init__(self, pv_path=None, is_Tb:bool=True, line_name:str="J_2_1",
                  obj_name:str = "L1489_irs", inclination:float = 73.0, PA:float = 69.0,
-                 M_star:float = 1.6, distance_pc:float = 140.0, v_sys:float = 7.22):
+                 M_star:float = 1.6, distance_pc:float = 140.0, v_sys:float = 7.22, 
+                 conversion:Union[str, Literal["IvtoTb", 'IvtoTex', "TbtoIv"]] = "IvtoTb"):
 
         self.pv_path = pv_path
         self.is_Tb = is_Tb
+        self.conversion = conversion
         self.obj_name = obj_name
         self.inclination = inclination  # Inclination in degree
         self.PA = PA  # PA im degree
@@ -73,7 +76,7 @@ class pv_analyze:
             print(f" rms = {pv.estimate_noise() :.2e} Jy beam$^-1$")
 
         if self.is_Tb:
-            pv.convert_units(conversion="IvtoTb")
+            pv.convert_units(conversion=self.conversion)
             self.rms = pv.estimate_noise()
             print(rf" rms = {self.rms :.2f} K")
 
