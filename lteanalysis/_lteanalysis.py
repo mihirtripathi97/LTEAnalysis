@@ -11,6 +11,7 @@ import sys
 import math
 import glob
 import numpy as np
+import time
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -479,6 +480,115 @@ class LTEAnalysis():
 
 
 
+    def solve_ntrans(self, mol, Ju, 
+        Tb, e_Tb, delv, p0, lineprof='gauss', 
+        e_flux = 0., Xconv=None, Tbg=2.73,
+        nmc = 3000, outname = None, savefig = False,
+        showfig = False, Tex_plt = np.arange(10., 60., 10.),
+        Ncol_plt = np.logspace(9,12,6)):
+        '''
+        Solve LTE equation to get Tex and Ncol for given Tb of multiple transition lines for a molecule.
+
+        Parameters
+        ----------
+         mol (str): molecule for which the LTE equation is solved.
+         Ju_list (list): J of the upper energy state.
+         Tb (array): Tb array in a shape of (n, m), where n is the number of rotational
+          transitions and m is the number of data points.
+         e_Tb (array): Uncertainties of Tb.
+         delv (float): Line width.
+        '''
+        # for plot
+        import corner
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        import arviz as az
+
+        def n2diagram(ax, Tb, e_Tb, popt):
+            # make grid
+            _, ax = self.makegrid([mol, mol], Ju[0], Ju[1], 
+                Tex_plt, Ncol_plt, delv, lineprof=lineprof, 
+                Xconv=[Xconv, Xconv], Tbg=2.73, Tb=True, lw=1., aspect=1.,
+                ax = ax)
+            # data
+            ax.errorbar(Tb[0], Tb[1], xerr= e_Tb[0], yerr = e_Tb[1],
+                ls = '', capsize = 2., capthick = 1., color = 'k'
+                )
+            # solution
+            Tb_fit = np.array([func(Ju[i],*popt) for i in range(len(Ju))])
+            ax.scatter(Tb_fit[0], Tb_fit[1], color = 'r', alpha = 0.5)
+
+
+        # number of transitions
+        ntrans = len(Ju)
+        if type(Ju) == list:
+            Ju = np.array(Ju)
+
+        # fitting function
+        func = lambda Ju, Tex, Ncol: self.get_intensity(mol, Ju, Tex, Ncol, delv, 
+            lineprof=lineprof, Xconv=Xconv, Tbg=Tbg, Tb=True, return_tau=False)
+
+
+        # fitting
+        if len(Tb.shape) == 1:
+            # fit
+            pfit, popt, perr = mcsolver(func, p0, Ju, Tb, e_Tb, e_flux, nmc = nmc)
+            # plot
+            if any([savefig, showfig]):
+                fig = corner.corner(pfit.T, 
+                    labels = [r'$T_\mathrm{ex}$', r'$N_\mathrm{col}$'],
+                    range = [0.95]*2)
+                # subplot
+                axes = fig.get_axes()
+                ax = inset_axes(axes[1], width = '70%', height = '70%',
+                    loc = 'upper right')
+                n2diagram(ax, Tb, e_Tb, popt)
+
+                if savefig: fig.savefig(outname + '.pdf', transparent = True)
+                if showfig: plt.show()
+                plt.close()
+            return popt, perr
+        elif len(Tb.shape) == 2:
+            # shape
+            n, m = Tb.shape
+            if n != ntrans:
+                Tb = Tb.T
+                e_Tb = e_Tb.T
+                n, m = Tb.shape
+            if n > 2:
+                print('CAUTION\tsolve_ntrans: currently no plot option is available for n > 2.')
+                savefig = False
+                showfig = False
+
+            # output array
+            popt_out = np.empty((2, m))
+            perr_out = np.empty((2, 2, m))
+
+            # fitting
+            for i in range(m):
+                # fit
+                pfit, popt, perr = mcsolver(func, p0, Ju, Tb[:,i], e_Tb[:,i], 
+                    e_flux, nmc = nmc)
+                popt_out[:,i] = popt
+                perr_out[:,:,i] = perr
+
+                # plot
+                if any([savefig, showfig]):
+                    fig = corner.corner(pfit.T, labels = [r'$T_\mathrm{ex}$', r'$N_\mathrm{col}$'],
+                        range = [0.95]*2)
+                    # subplot
+                    axes = fig.get_axes()
+                    ax = inset_axes(axes[1], width = '70%', height = '70%',
+                        loc = 'upper right')
+                    n2diagram(ax, Tb[:,i], e_Tb[:,i], popt)
+
+                    if savefig: fig.savefig(outname + '_m%i'%i + '.pdf', transparent = True)
+                    if showfig: plt.show()
+                    plt.close()
+            return popt_out, perr_out
+        else:
+            print('ERROR\tsolve_ntrans: input Tb must be in one or two dimension.')
+            return 0
+
 
 
 # partition function
@@ -540,3 +650,45 @@ def change_aspect_ratio(ax, ratio, plottype='linear'):
     aspect = np.abs(aspect)
     aspect = float(aspect)
     ax.set_aspect(aspect)
+
+
+def mcsolver(func, p0, x, y, e_y, e_f = 0., nmc = 3000,
+    simple_out = False, credible_interval = 0.68):
+    # module
+    from tqdm import tqdm
+    from scipy import optimize, stats
+    import arviz as az
+
+    # chi to be minimized
+    def chi(p, x, y, e_y,):
+        return (y - func(x, *p)) / e_y
+
+    # random sampling
+    pfit = np.empty((len(p0), nmc))
+    ysmpl = np.array([
+        np.random.normal(y[i], e_y[i], nmc) for i in range(len(y))
+        ])
+    scale = np.random.normal(1., e_f, nmc) if e_f > 0. else np.ones(nmc)
+
+    # fitting
+    pfit = np.array([
+        optimize.leastsq(chi, p0, 
+            args=(x, ysmpl[:,i] * scale[i], e_y * scale[i]), full_output=True)[0]
+        for i in tqdm(range(nmc))
+        ]).T
+
+    # output
+    if simple_out:
+        popt = np.nanmean(pfit, axis = 1)
+        #popt, _ = stats.mode(pfit, axis = 1, nan_policy='omit')
+        perr = np.sqrt(np.nanvar(pfit, axis = 1))
+    else:
+        pstat = np.percentile(pfit, 
+                [50*(1. - credible_interval), 50, 50*(1. + credible_interval)],
+                axis = 1)
+        #print(pstat)
+        q = np.diff(pstat, axis=0)
+        popt = pstat[1,:]
+        perr = q[:, :]
+
+    return pfit, popt, perr
