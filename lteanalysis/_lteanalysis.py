@@ -501,6 +501,7 @@ class LTEAnalysis():
         # for plot
         import corner
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        import arviz as az
 
         def n2diagram(ax, Tb, e_Tb, popt):
             # make grid
@@ -533,7 +534,9 @@ class LTEAnalysis():
             pfit, popt, perr = mcsolver(func, p0, Ju, Tb, e_Tb, e_flux, nmc = nmc)
             # plot
             if any([savefig, showfig]):
-                fig = corner.corner(pfit.T, labels = [r'$T_\mathrm{ex}$', r'$N_\mathrm{col}$'])
+                fig = corner.corner(pfit.T, 
+                    labels = [r'$T_\mathrm{ex}$', r'$N_\mathrm{col}$'],
+                    range = [0.95]*2)
                 # subplot
                 axes = fig.get_axes()
                 ax = inset_axes(axes[1], width = '70%', height = '70%',
@@ -542,6 +545,7 @@ class LTEAnalysis():
 
                 if savefig: fig.savefig(outname + '.pdf', transparent = True)
                 if showfig: plt.show()
+                plt.close()
             return popt, perr
         elif len(Tb.shape) == 2:
             # shape
@@ -569,7 +573,8 @@ class LTEAnalysis():
 
                 # plot
                 if any([savefig, showfig]):
-                    fig = corner.corner(pfit.T, labels = [r'$T_\mathrm{ex}$', r'$N_\mathrm{col}$'])
+                    fig = corner.corner(pfit.T, labels = [r'$T_\mathrm{ex}$', r'$N_\mathrm{col}$'],
+                        range = [0.95]*2)
                     # subplot
                     axes = fig.get_axes()
                     ax = inset_axes(axes[1], width = '70%', height = '70%',
@@ -578,7 +583,7 @@ class LTEAnalysis():
 
                     if savefig: fig.savefig(outname + '_m%i'%i + '.pdf', transparent = True)
                     if showfig: plt.show()
-
+                    plt.close()
             return popt_out, perr_out
         else:
             print('ERROR\tsolve_ntrans: input Tb must be in one or two dimension.')
@@ -652,6 +657,7 @@ def mcsolver(func, p0, x, y, e_y, e_f = 0., nmc = 3000,
     # module
     from tqdm import tqdm
     from scipy import optimize, stats
+    import arviz as az
 
     # chi to be minimized
     def chi(p, x, y, e_y,):
