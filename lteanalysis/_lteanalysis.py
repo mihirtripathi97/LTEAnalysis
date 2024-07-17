@@ -543,7 +543,7 @@ class LTEAnalysis():
                     loc = 'upper right')
                 n2diagram(ax, Tb, e_Tb, popt)
 
-                if savefig: fig.savefig(outname + '.pdf', transparent = True)
+                if savefig: fig.savefig(outname + '.jpg', transparent = True)
                 if showfig: plt.show()
                 plt.close()
             return popt, perr
@@ -581,7 +581,7 @@ class LTEAnalysis():
                         loc = 'upper right')
                     n2diagram(ax, Tb[:,i], e_Tb[:,i], popt)
 
-                    if savefig: fig.savefig(outname + '_m%i'%i + '.pdf', transparent = True)
+                    if savefig: fig.savefig(outname + '_m%i'%i + '.jpeg', transparent = True)
                     if showfig: plt.show()
                     plt.close()
             return popt_out, perr_out
