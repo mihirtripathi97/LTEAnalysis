@@ -96,6 +96,11 @@ class LTEAnalysis():
         #for i in range(ntrans):
         #    print('Eu, Eu: %.4f %.4f'%(EJ[i+1], delE[i]))
 
+        # transitions
+        trans = [ str(J[ int(Jup[i] - 1)]) + '-' \
+        + str( J[ int(Jlow[i] - 1)]) for i in range(len(itrans))]
+
+        # save
         self.moldata[line] = {
         'weight':weight,
         'nlevels': nlevels,
@@ -103,6 +108,7 @@ class LTEAnalysis():
         'gJ': gJ,
         'J': J,
         'ntrans': ntrans,
+        'trans': trans,
         'Jup': Jup,
         'Jlow': Jlow,
         'Acoeff': Acoeff,
@@ -179,7 +185,7 @@ class LTEAnalysis():
             return Iv
 
 
-    def get_tbratio(self, line, Ju_u, Ju_l, Tex, Ncol, delv, lineprof='rect', 
+    def get_tbratio(self, line, Ju_u, Ju_l, Tex, Ncol, delv, lineprof='gauss', 
         mode='lte', Xconv=None, Tbg=2.73):
         '''
         Get Tb ratio between two transitions.
@@ -190,7 +196,8 @@ class LTEAnalysis():
         tb_l = self.get_intensity(line, Ju_l, Tex, Ncol, delv, lineprof=lineprof, 
             mode=mode, Xconv=Xconv, Tbg=Tbg, return_tau=False, Tb=True)
 
-        return tb_u/tb_l
+        return tb_u / tb_l
+
 
     def get_ltemass(self, line, Fv, Ju, Tex, Xconv,
         dist=140., mu=2.8, S_TA=None, bmaj=None, bmin=None):
@@ -386,7 +393,8 @@ class LTEAnalysis():
 
 
     def makegrid(self, lines, J1, J2, Texes, Ncols, delv, lineprof='rect', 
-        mode='lte', Xconv=[], Tbg=2.73, Tb=True, fig=None, ax=None, lw=1., aspect=1.):
+        mode='lte', Xconv=[], Tbg=2.73, Tb=True, fig=None, ax=None, lw=1., aspect=1.,
+        xtype = 'int', ytype = 'int'):
         '''
         Produce a grid for the line intensity ratio for two transitions.
 
@@ -409,6 +417,128 @@ class LTEAnalysis():
             Tb: (bool): If True, the output will be in the brightness temperature. Otherwise, the output
              will be in intensity in a unit of cgs.
         '''
+        # Parameters
+        if type(lines) is str:
+            lines = [lines]*2
+        elif type(lines) is list:
+            if len(lines) !=2:
+                print("ERROR\tget_grid: More than two elements are given for 'lines'.")
+                print("ERROR\tget_grid: lines must be str or list with two elements.")
+                return 0
+        else:
+            print("ERROR\tget_grid: Type of 'lines' is wrong.")
+            print("ERROR\tget_grid: lines must be str or list with two elements.")
+            return 0
+
+        if type(Xconv) is float:
+            Xconv = [Xconv]*2
+        elif type(Xconv) is list:
+            if len(Xconv) == 0:
+                Xconv = [None]*2
+            elif len(Xconv) != 2:
+                print("ERROR\tget_grid: More than two elements are given for 'Xconv'.")
+                print("ERROR\tget_grid: Xconv must be float or list with two elements.")
+                return 0
+        else:
+            print("ERROR\tget_grid: Type of 'Xconv' is wrong.")
+            print("ERROR\tget_grid: Xconv must be float or list with two elements.")
+            return 0
+
+        
+        # define instant functions
+        if xtype == 'int':
+            f_tb1 = lambda Tex, Ncol: self.get_intensity(
+                lines[0], J1, Tex, Ncol, delv, 
+                lineprof=lineprof, mode=mode, Xconv=Xconv[0], 
+                Tbg=Tbg, return_tau=False, Tb=Tb)
+            xlabel = r'$T_\mathrm{b}$ (%s)'%(self.moldata[lines[0]]['trans'][J1 - 1])
+        elif xtype == 'ratio':
+            f_tb1 = lambda Tex, Ncol: self.get_tbratio(
+                lines[0], J1[0], J1[1], Tex, Ncol, delv, 
+                lineprof=lineprof, mode=mode, Xconv=Xconv[0], Tbg=Tbg,)
+            xlabel = r'$T_\mathrm{b}$ (%s)$/T_\mathrm{b}$ (%s)'%(
+                self.moldata[lines[0]]['trans'][J1[0] - 1], 
+                self.moldata[lines[0]]['trans'][J1[1] - 1])
+        else:
+            print('ERROR\tmakegrid: ytype must be int or ratio.')
+            return 0
+        
+        if ytype == 'int':
+            f_tb2 = lambda Tex, Ncol: self.get_intensity(
+                lines[1], J2, Tex, Ncol, delv, 
+                lineprof=lineprof, mode=mode, Xconv=Xconv[1], 
+                Tbg=Tbg, return_tau=False, Tb=Tb)
+            ylabel = r'$T_\mathrm{b}$(%s)'%(self.moldata[lines[1]]['trans'][J2 - 1])
+        elif ytype == 'ratio':
+            f_tb2 = lambda Tex, Ncol: self.get_tbratio(
+                lines[1], J2[0], J2[1], Tex, Ncol, delv, 
+                lineprof=lineprof, mode=mode, Xconv=Xconv[1], Tbg=Tbg,)
+            ylabel = r'$T_\mathrm{b}$(%s) $/$ $T_\mathrm{b}$(%s)'%(
+                self.moldata[lines[1]]['trans'][J2[0] - 1], 
+                self.moldata[lines[1]]['trans'][J2[1] - 1])
+        else:
+            print('ERROR\tmakegrid: ytype must be int or ratio.')
+            return 0
+
+        # figure
+        if (fig is None) and (ax is None):
+            fig = plt.figure()#figsize=(11.69, 8.27))
+            ax  = fig.add_subplot(111)
+        elif (fig is not None) and (ax is None):
+            ax  = fig.add_subplot(111)
+
+        # iso-temperature curves
+        for i, Tex_i in enumerate(Texes):
+            tb1 = []
+            tb2 = []
+            for j, Ncol_i in enumerate(np.logspace(np.log10(Ncols[0]), np.log10(Ncols[-1]),128)):
+                tb1.append(f_tb1(Tex_i, Ncol_i))
+                tb2.append(f_tb2(Tex_i, Ncol_i))
+
+            ax.plot(tb1, tb2, c=cm.coolwarm(float(i+1)/len(Texes)), lw=lw)
+
+
+        # iso-density curves
+        for i, Ncol_i in enumerate(Ncols):
+            tb1 = []
+            tb2 = []
+            for j, Tex_i in enumerate(np.linspace(Texes[0], Texes[-1],128)):
+                tb1.append(f_tb1(Tex_i, Ncol_i))
+                tb2.append(f_tb2(Tex_i, Ncol_i))
+            ax.plot(tb1, tb2, c='k', lw=lw)#)cm.BrBG(float(i+0.5)/len(Ncols)))
+
+
+        # aspect ratio
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        change_aspect_ratio(ax, aspect)
+
+        return fig, ax
+
+
+    '''
+    def makegrid_old(self, lines, J1, J2, Texes, Ncols, delv, lineprof='rect', 
+        mode='lte', Xconv=[], Tbg=2.73, Tb=True, fig=None, ax=None, lw=1., aspect=1.):
+        Produce a grid for the line intensity ratio for two transitions.
+
+        Parameters
+        ----------
+            lines (str or list): Name of lines. A single line can be given as the str object.
+             Two different lines can be given as a list of two line names.
+            J1 (int): Upper excitation level of the first transition.
+            J2 (int): Upper excitation level of the second transition.
+            Texes (array): Array of excitation temperatures (K), with which the grid will be calculated.
+            Ncols (array): Array of H2 or molecule's number column densities, with which 
+             the grid will be calculated (cm^-2).
+            delv (float): FWHM of the line profile (cm s^-1).
+            mode (str): LTE or non-LTE. Currently only LTE assumption is supported.
+            Xconv (float or list): Conversion factors from the H2 column density to the column density of the
+             target molecule. Can be given as float for a single molecule, or as a list for two different kinds.
+             If this is not given, then the input column density is regarded as the 
+             column density of the target molecule.
+            Tbg (float): Temperature of the background emission (K).
+            Tb: (bool): If True, the output will be in the brightness temperature. Otherwise, the output
+             will be in intensity in a unit of cgs.
         # Parameters
         if type(lines) is str:
             lines = [lines]*2
@@ -477,6 +607,7 @@ class LTEAnalysis():
         change_aspect_ratio(ax, aspect)
 
         return fig, ax
+    '''
 
 
 
